@@ -1,6 +1,7 @@
-from enum import Enum
+from enum import Enum, unique
 
 
+@unique
 class PermissionType(Enum):
     Owner = 1
     Admin = 2
