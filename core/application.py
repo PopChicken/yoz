@@ -8,6 +8,10 @@ from pydantic import BaseModel
 
 class App(ABC):
 
+    def __init__(self) -> None:
+        self.nickname: str
+        self.commandHead: str
+
     @abstractmethod
     def run(self):
         pass

@@ -1,8 +1,0 @@
-banned_words: [jn]
-cooldown: 10000
-enabled_groups:
-- 1075373625
-- 943539912
-# - 823680790
-repeat_prob: 0.4
-

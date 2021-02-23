@@ -1,6 +1,10 @@
 from typing import Any, Awaitable, Callable, Dict, List
+from enum import Enum
 
-from pydantic.errors import ClassError
+
+class CommandType(Enum):
+    Group = 0,
+    Contact = 1
 
 
 class Loader:
@@ -12,7 +16,7 @@ class Loader:
         str, Callable
     ] = {}
 
-    allCommands: Dict[
+    contactCommands: Dict[
         str, Callable
     ]
 
@@ -25,11 +29,15 @@ class Loader:
         return lis_decorator
     
     @classmethod
-    def command(cls, command: str, baseEvent: str = None):
+    def command(cls, command: str, base: CommandType):
         def cmd_decorator(func: Callable):
-            if baseEvent == 'GroupMessage':
-                cls.groupCommands[command, func]
-            elif baseEvent == 'ContactMessage':
-                cls.contactCommands[command, func]
+            if base == CommandType.Group:
+                if command in cls.groupCommands:
+                    raise Exception("指令重复注册")
+                cls.groupCommands[command] = func
+            elif base == CommandType.Contact:
+                if command in cls.contactCommands:
+                    raise Exception("指令重复注册")
+                cls.contactCommands[command] = func
             return func
         return cmd_decorator

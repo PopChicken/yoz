@@ -1,3 +1,4 @@
+from core.event import GroupMessageRecvEvent
 from typing import overload
 from core.message import Message
 from core.entity.group import Group
@@ -21,6 +22,9 @@ class Mirai(App):
         self.commandHead: str = s.CMD_HEAD
         self.sessionKey: str
 
+        self.nickname = s.NICKNAME
+
+
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
 
@@ -34,8 +38,23 @@ class Mirai(App):
             "messageChain": message.chain()
         }
         requests.post(f'{s.HTTP_URL}/sendGroupMessage', json=fMsg)
-    
+
     def mute(self, group: Group, id: int, time: int):
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group.id,
+            "memberId": id,
+            "time": time
+        }
+        requests.post(f'{s.HTTP_URL}/mute', json=fMsg)
+
+    def unmute(self, group: Group, id: int, time: int):
+        pass
+
+    def muteAll(self, group: Group):
+        pass
+
+    def unmuteAll(self, group: Group):
         pass
 
     async def _message_event_socket(self):
@@ -53,10 +72,33 @@ class Mirai(App):
             eventName = response['type']
 
             if eventName == 'GroupMessage' or eventName == 'FriendMessage':
-                continue
+                # TODO use Trie tree to optimize command match
+                try:
+                    mostMatch = ''
+                    section1 = response['messageChain'][1]
+                    if section1['type'] == 'Plain' \
+                            and section1['text'][0] == s.CMD_HEAD:
+                        text = section1['text'][1:]
+                        if eventName == 'GroupMessage':
+                            for cmdStr in Loader.groupCommands.keys():
+                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
+                                    mostMatch = cmdStr
+                            section1['text'] = section1['text'][len(cmdStr)+1:]
+                            e = GroupMessageRecvEvent(
+                                unify.unify_event_dict(response))
+                        else:
+                            # TODO add contact message handler
+                            pass
+                    if len(mostMatch) != 0:
+                        await Loader.groupCommands[mostMatch](self, e)
+                        continue
+                except Exception as e:
+                    print("指令识别出错: ", e)
+                    continue
 
             if hasattr(Mirai2CoreEvents, eventName):
-                e = Mirai2CoreEvents[eventName].value[0](unify.unify_event_dict(response))
+                e = Mirai2CoreEvents[eventName].value[0](
+                    unify.unify_event_dict(response))
                 listeners = Loader.eventsListener.get(eventName)
 
                 if listeners is not None:
@@ -68,7 +110,8 @@ class Mirai(App):
 
     def run(self):
 
-        asyncio.get_event_loop().run_until_complete(self._init_modules())   # init modules
+        asyncio.get_event_loop().run_until_complete(
+            self._init_modules())   # init modules
 
         auth = {
             'authKey': s.AUTH_KEY

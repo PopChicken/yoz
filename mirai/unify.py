@@ -15,12 +15,11 @@ def unify_event_dict(event_dict: dict) -> dict:
     if 'sender' in event_dict:
         sender = event_dict['sender']
         event_dict['sender']['permission'] = \
-            __PERMISSION_MAP[sender['permission']]
-        event_dict
+            __PERMISSION_MAP[sender['permission'].upper()]
         if 'group' in sender:
             group = sender['group']
             event_dict['sender']['group']['permission'] = \
-                __PERMISSION_MAP[group['permission']]
+                __PERMISSION_MAP[group['permission'].upper()]
     return event_dict
 
 def unify_message2chain(message: Message) -> List[dict]:

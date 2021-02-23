@@ -84,6 +84,7 @@ async def onLoad(app: App):
                 print('备份失败，使用默认配置，取消覆写 conf.yml')
 
     conf.seek(0)
+    conf.truncate()
 
     if not haveError:
         settings = settings_tmp

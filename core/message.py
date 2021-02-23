@@ -142,9 +142,9 @@ class Message:
             components = re.split(rf'(\[YOZ:({typeMatch}).*\])', raw)
 
             for component in components:
-                m = re.match(rf'\[YOZ:({typeMatch}).*\]')
+                m = re.match(rf'\[YOZ:({typeMatch}).*\]', raw)
                 if m is None:
-                    self.msgChain.append(component)
+                    self.msgChain.append(TextMsg(text=component))
                 else:
                     typeName = m.group(1)
                     properties = dict(re.findall(
