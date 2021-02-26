@@ -11,22 +11,15 @@ class PermissionType(Enum):
 class Member:
 
     def __init__(self, id: int, memberName: str, permission: str) -> None:
-        self.id: int
-        self.inGroupName: str
-        self.permission: PermissionType
-
-        self.id = id
-        self.inGroupName = memberName
-        self.permission = PermissionType[permission]
+        self.id: int = id
+        self.inGroupName: str = memberName
+        self.permission: PermissionType = PermissionType[permission]
 
 
 class Group:
 
     def __init__(self, id: int, groupName: str, permission: str) -> None:
-        self.id: int
-        self.name: str
-        self.permission: PermissionType
+        self.id: int = id
+        self.name: str = groupName
+        self.permission: PermissionType = PermissionType[permission]
 
-        self.id = id
-        self.name = groupName
-        self.permission = PermissionType[permission]

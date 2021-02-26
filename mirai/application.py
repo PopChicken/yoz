@@ -6,13 +6,13 @@ import requests
 import mirai.settings as s
 import mirai.unify as unify
 
-from typing import List, overload
+from typing import Callable, List, overload
 
 from mirai.mapping import Mirai2CoreEvents
 
 from core.application import App
 from core.loader import Loader
-from core.event import GroupMessageRecvEvent
+from core.event import ContactMessageRecvEvent, GroupMessageRecvEvent
 from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
@@ -99,6 +99,7 @@ class Mirai(App):
             if eventName == 'GroupMessage' or eventName == 'FriendMessage':
                 # TODO use Trie tree to optimize command match
                 try:
+                    activeCommand: Callable
                     mostMatch = ''
                     section1 = response['messageChain'][1]
                     if section1['type'] == 'Plain' \
@@ -111,11 +112,17 @@ class Mirai(App):
                             section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = GroupMessageRecvEvent(
                                 unify.unify_event_dict(response))
+                            activeCommand = Loader.groupCommands[mostMatch]
                         else:
-                            # TODO add contact message handler
-                            pass
-                    if len(mostMatch) != 0:
-                        await Loader.groupCommands[mostMatch](self, e)
+                            for cmdStr in Loader.contactCommands.keys():
+                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
+                                    mostMatch = cmdStr
+                            section1['text'] = section1['text'][len(mostMatch)+1:]
+                            e = ContactMessageRecvEvent(
+                                unify.unify_event_dict(response))
+                            activeCommand = Loader.contactCommands[mostMatch]
+                    if activeCommand is not None:
+                        await activeCommand(self, e)
                         continue
                 except Exception as e:
                     print("指令识别出错: ", e)

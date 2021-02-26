@@ -18,7 +18,7 @@ class Loader:
 
     contactCommands: Dict[
         str, Callable
-    ]
+    ] = {}
 
     @classmethod
     def listen(cls, eventName: str):

@@ -41,7 +41,7 @@ class GroupMessageRecvEvent(BaseEvent):
             id=groupId,
             groupName=groupName,
             permission=groupPermission
-        )       
+        )
 
 
 class ContactMessageRecvEvent(BaseEvent):
@@ -52,3 +52,15 @@ class ContactMessageRecvEvent(BaseEvent):
 
         super().__init__(EventType.ContactMessageEvent)
         self.msg = Message(chain=data['messageChain'])
+        senderInfo = data['sender']
+        id = senderInfo['id']
+        nickname = senderInfo['nickname']
+        remark = senderInfo['remark']
+
+        self.msg = Message(chain=data['messageChain'])
+        self.sender = Contact(
+            id=id,
+            nickname=nickname,
+            remark=remark
+        )
+
