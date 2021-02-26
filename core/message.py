@@ -2,7 +2,7 @@ import re
 import hashlib
 import copy
 
-from typing import List
+from typing import List, overload
 
 from core.extern.message.enums import MessageType
 from core.extern.message.enums import *
@@ -23,18 +23,6 @@ class BaseMsg:
 
 
 class TextMsg(BaseMsg):
-
-    """
-    __ENCODE_DICT = {
-        '\\': r'\\',
-        ']': r'\]',
-        '[': r'\['
-    }
-    
-    def __encode(raw: str):
-        for pair in TextMsg.__ENCODE_DICT.items():
-            raw.replace(pair[0], pair[1])
-    """
 
     def __init__(self, data: dict = None, text: str = None) -> None:
         self.text: str
@@ -68,7 +56,7 @@ class RefMsg(BaseMsg):
         if data is not None and target is None:
             try:
                 self.target = int(data['target'])
-                self.display = data['display']
+                # self.display = data['display']
             except:
                 raise Exception("At 消息初始化错误 输入: ", data)
         elif data is None and target is not None:
@@ -138,19 +126,7 @@ class Message:
                     print('解析消息链时出现问题:\n\t', e)
 
         elif chain is None and raw is not None:
-            typeMatch = '|'.join(list(Message.__CONVERTOR.keys()))
-            components = re.split(rf'(\[YOZ:({typeMatch}).*\])', raw)
-
-            for component in components:
-                m = re.match(rf'\[YOZ:({typeMatch}).*\]', raw)
-                if m is None:
-                    self.msgChain.append(TextMsg(text=component))
-                else:
-                    typeName = m.group(1)
-                    properties = dict(re.findall(
-                        r',\s*([^,]+)\s*=\s*([^,\]]+)\s*', component))
-                    self.msgChain.append(
-                        Message.__CONVERTOR[typeName](properties))
+            self.phraseAppend(raw)
 
     def __str__(self) -> str:
         msgStr = ''
@@ -171,3 +147,36 @@ class Message:
             msgDict.update(msg.dict())
             chain.append(msgDict)
         return chain
+    
+    def phraseAppend(self, raw: str) -> None:
+        typeMatch = '|'.join(list(Message.__CONVERTOR.keys()))
+        components = re.split(rf'(\[YOZ:({typeMatch}).*\])', raw)
+
+        skip = False
+
+        for component in components:
+            if len(component) == 0:
+                continue
+            if skip:
+                skip = False
+                continue
+            m = re.match(rf'\[YOZ:({typeMatch}).*\]', component)
+            if m is None:
+                self.msgChain.append(TextMsg(text=component))
+            else:
+                skip = True
+                typeName = m.group(1)
+                properties = dict(re.findall(
+                    r',\s*([^,]+)\s*=\s*([^,\]]+)\s*', component))
+                self.msgChain.append(
+                    Message.__CONVERTOR[typeName](properties))
+
+    @classmethod
+    def phrase(cls, *obj):
+        msg = cls()
+        for partMsg in obj:
+            if isinstance(partMsg, BaseMsg):
+                msg.msgChain.append(partMsg)
+            elif isinstance(partMsg, str):
+                msg.phraseAppend(partMsg)
+        return msg

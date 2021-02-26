@@ -2,7 +2,7 @@ from core.event import GroupMessageRecvEvent
 from typing import overload
 from core.message import Message
 from core.entity.group import Group
-from core.model import Contact
+from core.entity.contact import Contact
 import websockets
 import asyncio
 import json
@@ -28,33 +28,33 @@ class Mirai(App):
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
 
-    def sendGroupMessage(self, target: Group, message):
+    def sendGroupMessage(self, group: int, message):
         if not isinstance(message, Message):
             message = Message(raw=message)
         message: Message
         fMsg = {
             "sessionKey": self.sessionKey,
-            "target": target.id,
+            "target": group,
             "messageChain": message.chain()
         }
         requests.post(f'{s.HTTP_URL}/sendGroupMessage', json=fMsg)
 
-    def mute(self, group: Group, id: int, time: int):
+    def mute(self, group: int, id: int, time: int):
         fMsg = {
             "sessionKey": self.sessionKey,
-            "target": group.id,
+            "target": group,
             "memberId": id,
             "time": time
         }
         requests.post(f'{s.HTTP_URL}/mute', json=fMsg)
 
-    def unmute(self, group: Group, id: int, time: int):
+    def unmute(self, group: int, id: int, time: int):
         pass
 
-    def muteAll(self, group: Group):
+    def muteAll(self, group: int):
         pass
 
-    def unmuteAll(self, group: Group):
+    def unmuteAll(self, group: int):
         pass
 
     async def _message_event_socket(self):
