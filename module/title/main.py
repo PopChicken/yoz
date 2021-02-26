@@ -64,14 +64,14 @@ def existElem(l: list, elem: Any) -> bool:
 
 @Loader.command("赐名", CommandType.Group)
 async def plantCommand(app: App, e: GroupMessageRecvEvent):
-    group = e.group
+    groupId = e.group.id
     message = str(e.msg).strip()
 
-    if not existElem(settings['enabled_groups'], group.id):
+    if not existElem(settings['enabled_groups'], groupId):
         return
 
-    if group.permission == PermissionType.Member:
-        app.sendGroupMessage(group, Message.phrase(
+    if e.group.permission == PermissionType.Member:
+        app.sendGroupMessage(groupId, Message.phrase(
             RefMsg(target=e.sender.id),
             "需要管理员权限才能执行该指令嗷~"
         ))

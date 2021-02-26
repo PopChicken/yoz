@@ -98,7 +98,7 @@ async def onLoad(app: App):
     for id in settings['enabled_groups']:
         groupInfo[id] = Info(True, "")
     
-    _thread.start_new_thread(cooldown_thread)
+    _thread.start_new_thread(cooldown_thread, ())
 
     print('复读机加载成功')
 

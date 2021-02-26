@@ -1,4 +1,4 @@
-from core.model import Contact
+from core.entity.contact import Contact
 from core.entity.group import Group, Member
 from core.extern.event.enums import EventType
 from core.message import Message

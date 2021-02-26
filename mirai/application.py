@@ -1,8 +1,3 @@
-from core.event import GroupMessageRecvEvent
-from typing import overload
-from core.message import Message
-from core.entity.group import Group
-from core.entity.contact import Contact
 import websockets
 import asyncio
 import json
@@ -10,10 +5,17 @@ import requests
 
 import mirai.settings as s
 import mirai.unify as unify
+
+from typing import List, overload
+
 from mirai.mapping import Mirai2CoreEvents
 
 from core.application import App
 from core.loader import Loader
+from core.event import GroupMessageRecvEvent
+from core.message import Message
+from core.entity.group import Group, Member
+from core.entity.contact import Contact
 
 
 class Mirai(App):
@@ -23,7 +25,6 @@ class Mirai(App):
         self.sessionKey: str
 
         self.nickname = s.NICKNAME
-
 
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
@@ -57,6 +58,30 @@ class Mirai(App):
     def unmuteAll(self, group: int):
         pass
 
+    def sendContactMessage(self, contact, message) -> None:
+        pass
+
+    def recall(self, messageId: int) -> None:
+        pass
+
+    def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> None:
+        pass
+
+    def getContactList(self) -> List[Contact]:
+        pass
+
+    def getGroupList(self) -> List[Group]:
+        pass
+
+    def getMemberList(self, group: int) -> List[Member]:
+        pass
+
+    def kick(self, group: int, target: int, msg: str) -> None:
+        pass
+
+    def quit(self, group: int) -> None:
+        pass
+
     async def _message_event_socket(self):
         try:
             receiver = await websockets.connect(f'{s.WS_URL}/all?sessionKey={self.sessionKey}')
@@ -83,7 +108,7 @@ class Mirai(App):
                             for cmdStr in Loader.groupCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
                                     mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(cmdStr)+1:]
+                            section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = GroupMessageRecvEvent(
                                 unify.unify_event_dict(response))
                         else:

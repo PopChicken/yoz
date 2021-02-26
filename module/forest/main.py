@@ -103,7 +103,7 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
 
-    if groupId.permission == PermissionType.Member:
+    if e.group.permission == PermissionType.Member:
         return
 
     if not existElem(settings['enabled_groups'], groupId):
@@ -159,4 +159,3 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
         RefMsg(target=e.sender.id),
         (f"要专注哦~{app.nickname}为你加油！")
     ))
-

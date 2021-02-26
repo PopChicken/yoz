@@ -83,7 +83,7 @@ async def onLoad(app: App):
     
     conf.close()
 
-    _thread.start_new_thread(cooldown_thread)
+    _thread.start_new_thread(cooldown_thread, ())
 
     print('Revolver加载成功')
 
@@ -95,7 +95,7 @@ def existElem(l: list, elem: Any) -> bool:
     return False
 
 
-@Loader.command('转轮手枪',CommandType.Group)
+@Loader.command('转轮手枪', CommandType.Group)
 async def onCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     argument = str(e.msg).strip()
@@ -128,7 +128,7 @@ async def onCommand(app: App, e: GroupMessageRecvEvent):
         ))
 
 
-@Loader.command('扣扳机',CommandType.Group)
+@Loader.command('扣扳机', CommandType.Group)
 async def onCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
 
