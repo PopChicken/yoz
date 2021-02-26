@@ -4,6 +4,8 @@ import yaml
 from bisect import bisect_left
 from typing import Any
 
+from core.message import Message
+from core.message import RefMsg
 from core.loader import CommandType, Loader
 from core.extern.config import Config
 from core.application import App
@@ -19,14 +21,18 @@ settings = {
     'min_time': 1 * 1 * 30 * 60
 }
 
+
 def hourToSec(hour: float) -> int:
     return int(hour * 3600)
+
 
 def dayToSec(day: float) -> int:
     return int(day * 24 * 3600)
 
+
 def minToSec(min: float) -> int:
     return int(min * 60)
+
 
 def formatTime(sec: int):
     num: float
@@ -47,6 +53,7 @@ def formatTime(sec: int):
     if num / int(num) == 1.0:
         num = int(num)
     return f'{num}{unit}'
+
 
 @Loader.listen('Load')
 async def onLoad(app: App):
@@ -93,17 +100,18 @@ def existElem(l: list, elem: Any) -> bool:
 
 @Loader.command("种树", CommandType.Group)
 async def plantCommand(app: App, e: GroupMessageRecvEvent):
-    group = e.group
+    groupId = e.group.id
     message = str(e.msg).strip()
 
-    if group.permission == PermissionType.Member:
+    if groupId.permission == PermissionType.Member:
         return
 
-    if not existElem(settings['enabled_groups'], group.id):
+    if not existElem(settings['enabled_groups'], groupId):
         return
     
     if len(str(message).strip()) == 0:
-        app.sendGroupMessage(e.group,
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
             ("欢迎使用种树功能\n"
             "不 要 挑 战 自 制 力！\n"
             f"如果无法专注忍不住想水群，就让{app.nickname}来帮助你吧！\n"
@@ -114,13 +122,16 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
             "给自己安排对应时长的禁言w\n"
             f"时长需要在{formatTime(settings['min_time'])}"
             f"到{formatTime(settings['max_time'])}之间\n"
-            "未来会在种树结束获得一颗树哦~"))
+            "未来会在种树结束获得一颗树哦~")
+        ))
         return
 
     m = re.match(r'^(\d+(\.\d+)?)\s*(h|d|min)', message)
     if m is None:
-        app.sendGroupMessage(e.group, 
-            (f"格式不对哦，使用 {app.commandHead}种树 查看帮助"))
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
+            (f"格式不对哦，使用 {app.commandHead}种树 查看帮助")
+        ))
         return
     
     num = float(m.group(1))
@@ -135,13 +146,17 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
         sec = dayToSec(num)
     
     if sec > settings['max_time'] or sec < settings['min_time']:
-        app.sendGroupMessage(e.group, 
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
             ("种树时间不可取喔~\n"
             f"需要在{formatTime(settings['min_time'])}"
-            f"到{formatTime(settings['max_time'])}之间~"))
+            f"到{formatTime(settings['max_time'])}之间~")
+        ))
         return
     
-    app.mute(e.group, e.sender.id, sec)
-    app.sendGroupMessage(e.group,
-        (f"要专注哦~{app.nickname}为你加油！"))
+    app.mute(groupId, e.sender.id, sec)
+    app.sendGroupMessage(groupId, Message.phrase(
+        RefMsg(target=e.sender.id),
+        (f"要专注哦~{app.nickname}为你加油！")
+    ))
 

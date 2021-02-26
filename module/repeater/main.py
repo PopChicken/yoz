@@ -105,13 +105,13 @@ async def onLoad(app: App):
 
 @Loader.listen('GroupMessage')
 async def onRecvGroupMessage(app: App, e: GroupMessageRecvEvent):
-    group = e.group
+    groupId = e.group.id
     message = e.msg
 
-    if not existElem(settings['enabled_groups'], group.id):
+    if not existElem(settings['enabled_groups'], groupId):
         return
 
-    info = groupInfo[group.id]
+    info = groupInfo[groupId]
     new = message.md5()
     last = info.last
     info.last = new
@@ -123,8 +123,8 @@ async def onRecvGroupMessage(app: App, e: GroupMessageRecvEvent):
         return
     if random.random() > settings['repeat_prob']:
         return
-    app.sendGroupMessage(group, message)
+    app.sendGroupMessage(groupId, message)
     info.idle = False
 
     t = int(time.time()) + settings['cooldown']
-    cooldownQueue.put(Cooldown(group.id, t))
+    cooldownQueue.put(Cooldown(groupId, t))
