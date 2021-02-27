@@ -37,7 +37,7 @@ class App(ABC):
         """对群成员禁言，单位分钟"""
         pass
 
-    def unmute(self, group: int, id: int, time: int) -> None:
+    def unmute(self, group: int, id: int) -> None:
         """对群成员解除禁言"""
         pass
 

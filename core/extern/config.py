@@ -13,6 +13,7 @@ class Config:
         if not os.path.exists(Config.__configPath):
             os.makedirs(Config.__configPath)
     
+    @classmethod
     def update(cls, default: dict, loaded: dict) -> dict:
         new = copy.deepcopy(default)
         for key in loaded.keys():
