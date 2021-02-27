@@ -49,23 +49,80 @@ class Mirai(App):
         }
         requests.post(f'{s.HTTP_URL}/mute', json=fMsg)
 
-    def unmute(self, group: int, id: int, time: int):
-        pass
+    def unmute(self, group: int, id: int):
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group,
+            "memberId": id
+        }
+        requests.post(f'{s.HTTP_URL}/unmute', json=fMsg)
 
     def muteAll(self, group: int):
-        pass
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group
+        }
+        requests.post(f'{s.HTTP_URL}/muteAll', json=fMsg)
 
     def unmuteAll(self, group: int):
-        pass
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group
+        }
+        requests.post(f'{s.HTTP_URL}/unmuteAll', json=fMsg)
 
+    # mirai-http-api 有/sendFriendMessage 与 /sendTempMessage 分别对应好友与临时消息.
+    # TODO 临时消息尚无模型，建议tg接口中的临时消息接口直接调用sendContactMessage，mirai接口中分别实现。
     def sendContactMessage(self, contact, message) -> None:
-        pass
+        if not isinstance(message, Message):
+            message = Message(raw=message)
+        message: Message
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": contact,
+            "messageChain": message.chain()
+        }
+        requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg)
 
     def recall(self, messageId: int) -> None:
-        pass
+        """撤回消息"""
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": messageId
+        }
+        requests.post(f'{s.HTTP_URL}/recall', json=fMsg)
 
     def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> None:
-        pass
+        """
+        发送URL图片 
+        仅传入contantId:    好友消息
+        仅传入groupId:      群聊消息
+        都传入:             临时消息
+        """
+        # TODO tg EFB接口的临时消息同好友消息处理。
+        if contactId is None and groupId is not None:
+            fMsg = {
+                "sessionKey": self.sessionKey,
+                "target": groupId,
+                "group": groupId,
+                "urls": urls
+            }
+        elif contactId is not None and groupId is None:
+            fMsg = {
+                "sessionKey": self.sessionKey,
+                "target": contactId,
+                "qq": contactId,
+                "urls": urls
+            }
+        elif contactId is not None and groupId is not None:
+            fMsg = {
+                "sessionKey": self.sessionKey,
+                "target": contactId,
+                "qq": contactId,
+                "group": groupId,
+                "urls": urls
+            }
+        requests.post(f'{s.HTTP_URL}/sendImageMessage', json=fMsg)
 
     def getContactList(self) -> List[Contact]:
         pass
