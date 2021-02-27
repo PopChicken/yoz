@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import Enum, unique
 
-
+@unique
 class EventType(Enum):
     GroupMessageEvent = 'GroupMessageEvent'
     ContactMessageEvent = 'ContactMessageEvent'
