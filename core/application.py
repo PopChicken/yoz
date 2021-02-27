@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, overload
+from typing import Callable, Dict, List, overload
 from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
@@ -15,6 +15,22 @@ class App(ABC):
     @abstractmethod
     def run(self):
         """启动运行"""
+        pass
+
+    @abstractmethod
+    def redirect(self, guid: str, filter: dict, hook: Callable) -> None:
+        pass
+
+    @abstractmethod
+    def redirectMember(self, guid: str, groupId: int, memberId: int, hook: Callable) -> None:
+        pass
+
+    @abstractmethod
+    def redirectContact(self, guid: str, contactId: int, hook: Callable) -> None:
+        pass
+
+    @abstractmethod
+    def unredirect(self, guid: str) -> None:
         pass
     
     @abstractmethod

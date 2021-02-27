@@ -2,17 +2,18 @@ import websockets
 import asyncio
 import json
 import requests
+import pydblite
 
 import mirai.settings as s
 import mirai.unify as unify
 
-from typing import Callable, List, overload
+from typing import Callable, List, Dict
 
 from mirai.mapping import Mirai2CoreEvents
 
 from core.application import App
 from core.loader import Loader
-from core.event import ContactMessageRecvEvent, GroupMessageRecvEvent
+from core.event import BaseEvent, ContactMessageRecvEvent, GroupMessageRecvEvent
 from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
@@ -22,9 +23,164 @@ class Mirai(App):
 
     def __init__(self) -> None:
         self.commandHead: str = s.CMD_HEAD
-        self.sessionKey: str
+        self.sessionKey: str = ''
+        self.redirectors: Dict[str, (str, Callable)] = {}
+        self.memberRedirectors = pydblite.Base(':memory:')
+        self.contactRedirectors = pydblite.Base(':memory:')
+        self.nickname: str = s.NICKNAME
 
-        self.nickname = s.NICKNAME
+        self.memberRedirectors.create('guid', 'groupId', 'memberId', 'hook')
+        self.contactRedirectors.create('guid', 'contactId', 'hook')
+
+        self.memberRedirectors.create_index('guid', 'groupId', 'memberId')
+        self.contactRedirectors.create_index('guid', 'contactId')
+
+    # 过滤满足filter的消息，并将其完全重定向至hook
+    def redirect(self, guid: str, filter: dict,
+                 hook: Callable[[App, BaseEvent], None]):
+        # 待实现
+        self.redirectors[guid] = (filter, hook)
+
+    # 过滤满足特定群与QQ号的消息，并将其完全重定向至hook
+    def redirectMember(self, guid: str, groupId: int, memberId: int,
+                       hook: Callable[[App, GroupMessageRecvEvent], None]):
+        self.memberRedirectors.insert(
+            guid=guid,
+            groupId=groupId,
+            memberId=memberId,
+            hook=hook
+        )
+
+    # 过滤满足特定QQ号的消息，并将其完全重定向至hook
+    def redirectContact(self, guid: str, contactId: int,
+                        hook: Callable[[App, ContactMessageRecvEvent], None]):
+        self.contactRedirectors.insert(
+            guid=guid,
+            contactId=contactId,
+            hook=hook
+        )
+
+    # 卸载hook
+    def unredirect(self, guid: str) -> None:
+        if guid in self.redirectors:
+            del self.redirectors[guid]
+        else:
+            recs = self.contactRedirectors(guid=guid)
+            if len(recs) != 0:
+                del self.contactRedirectors[recs[0]['__id__']]
+            else:
+                recs = self.memberRedirectors(guid=guid)
+                if len(recs) != 0:
+                    del self.memberRedirectors[recs[0]['__id__']]
+
+    async def _message_event_socket(self):
+        try:
+            receiver = await websockets.connect(f'{s.WS_URL}/all?sessionKey={self.sessionKey}')
+        except Exception as e:
+            print('Websocket 连接出错:', e)
+        while True:
+            try:
+                response = await receiver.recv()
+                response = json.loads(response)
+            except Exception as e:
+                print('Websocket 通讯中出错:', e)
+
+            eventName = response['type']
+
+            # 检查是否满足redirector
+            if eventName == 'GroupMessage':
+                groupId = response['sender']['group']['id']
+                memberId = response['sender']['id']
+                rec = self.memberRedirectors(groupId=groupId, memberId=memberId)
+                if len(rec) != 0:
+                    rec = rec[0]
+                    e = GroupMessageRecvEvent(
+                        unify.unify_event_dict(response))
+                    rec['hook'](self, e)
+                    continue
+                
+            elif eventName == 'FriendMessage':
+                contactId = response['sender']['id']
+                rec = self.contactRedirectors(contactId=contactId)
+                if len(rec) != 0:
+                    rec = rec[0]
+                    e = ContactMessageRecvEvent(
+                        unify.unify_event_dict(response))
+                    rec['hook'](self, e)
+                    continue
+            
+            # 尝试匹配指令
+            if eventName == 'GroupMessage' or eventName == 'FriendMessage':
+                # TODO use Trie tree to optimize command match
+                try:
+                    activeCommand: Callable = None
+                    mostMatch = ''
+                    section1 = response['messageChain'][1]
+                    if section1['type'] == 'Plain' \
+                            and section1['text'][0] == s.CMD_HEAD:
+                        text = section1['text'][1:]
+                        if eventName == 'GroupMessage':
+                            for cmdStr in Loader.groupCommands.keys():
+                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
+                                    mostMatch = cmdStr
+                            section1['text'] = section1['text'][len(mostMatch)+1:]
+                            e = GroupMessageRecvEvent(
+                                unify.unify_event_dict(response))
+                            activeCommand = Loader.groupCommands[mostMatch]
+                        else:
+                            for cmdStr in Loader.contactCommands.keys():
+                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
+                                    mostMatch = cmdStr
+                            section1['text'] = section1['text'][len(mostMatch)+1:]
+                            e = ContactMessageRecvEvent(
+                                unify.unify_event_dict(response))
+                            activeCommand = Loader.contactCommands[mostMatch]
+                    if activeCommand is not None:
+                        await activeCommand(self, e)
+                        continue
+                except Exception as e:
+                    print("指令识别出错: ", e)
+                    continue
+
+            if hasattr(Mirai2CoreEvents, eventName):
+                e = Mirai2CoreEvents[eventName].value[0](
+                    unify.unify_event_dict(response))
+                listeners = Loader.eventsListener.get(eventName)
+
+                if listeners is not None:
+                    await asyncio.gather(*(listener(self, e) for listener in listeners))
+
+    async def _init_modules(self) -> None:
+        listeners = Loader.eventsListener.get('Load')
+        await asyncio.gather(*(listener(self) for listener in listeners))
+
+    def run(self):
+        # init modules
+        asyncio.get_event_loop().run_until_complete(self._init_modules())
+
+        auth = {
+            'authKey': s.AUTH_KEY
+        }
+        try:
+            resp = requests.post(f'{s.HTTP_URL}/auth', json=auth).json()
+            if resp['code'] != 0:
+                raise Exception(resp['msg'])
+            self.sessionKey = resp['session']
+        except Exception as e:
+            print("申请 session 时发生错误: ", e)
+
+        verify = {
+            'sessionKey': self.sessionKey,
+            'qq': s.BOT_ID
+        }
+        try:
+            resp = requests.post(f'{s.HTTP_URL}/verify', json=verify).json()
+            if resp['code'] != 0:
+                raise Exception(resp['msg'])
+        except Exception as e:
+            print("认证 session 时发生错误: ", e)
+
+        asyncio.get_event_loop().run_until_complete(self._message_event_socket())
 
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
@@ -138,90 +294,3 @@ class Mirai(App):
 
     def quit(self, group: int) -> None:
         pass
-
-    async def _message_event_socket(self):
-        try:
-            receiver = await websockets.connect(f'{s.WS_URL}/all?sessionKey={self.sessionKey}')
-        except Exception as e:
-            print('Websocket 连接出错:', e)
-        while True:
-            try:
-                response = await receiver.recv()
-                response = json.loads(response)
-            except Exception as e:
-                print('Websocket 通讯中出错:', e)
-
-            eventName = response['type']
-
-            if eventName == 'GroupMessage' or eventName == 'FriendMessage':
-                # TODO use Trie tree to optimize command match
-                try:
-                    activeCommand: Callable
-                    mostMatch = ''
-                    section1 = response['messageChain'][1]
-                    if section1['type'] == 'Plain' \
-                            and section1['text'][0] == s.CMD_HEAD:
-                        text = section1['text'][1:]
-                        if eventName == 'GroupMessage':
-                            for cmdStr in Loader.groupCommands.keys():
-                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
-                                    mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch)+1:]
-                            e = GroupMessageRecvEvent(
-                                unify.unify_event_dict(response))
-                            activeCommand = Loader.groupCommands[mostMatch]
-                        else:
-                            for cmdStr in Loader.contactCommands.keys():
-                                if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
-                                    mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch)+1:]
-                            e = ContactMessageRecvEvent(
-                                unify.unify_event_dict(response))
-                            activeCommand = Loader.contactCommands[mostMatch]
-                    if activeCommand is not None:
-                        await activeCommand(self, e)
-                        continue
-                except Exception as e:
-                    print("指令识别出错: ", e)
-                    continue
-
-            if hasattr(Mirai2CoreEvents, eventName):
-                e = Mirai2CoreEvents[eventName].value[0](
-                    unify.unify_event_dict(response))
-                listeners = Loader.eventsListener.get(eventName)
-
-                if listeners is not None:
-                    await asyncio.gather(*(listener(self, e) for listener in listeners))
-
-    async def _init_modules(self):
-        listeners = Loader.eventsListener.get('Load')
-        await asyncio.gather(*(listener(self) for listener in listeners))
-
-    def run(self):
-
-        asyncio.get_event_loop().run_until_complete(
-            self._init_modules())   # init modules
-
-        auth = {
-            'authKey': s.AUTH_KEY
-        }
-        try:
-            resp = requests.post(f'{s.HTTP_URL}/auth', json=auth).json()
-            if resp['code'] != 0:
-                raise Exception(resp['msg'])
-            self.sessionKey = resp['session']
-        except Exception as e:
-            print("申请 session 时发生错误: ", e)
-
-        verify = {
-            'sessionKey': self.sessionKey,
-            'qq': s.BOT_ID
-        }
-        try:
-            resp = requests.post(f'{s.HTTP_URL}/verify', json=verify).json()
-            if resp['code'] != 0:
-                raise Exception(resp['msg'])
-        except Exception as e:
-            print("认证 session 时发生错误: ", e)
-
-        asyncio.get_event_loop().run_until_complete(self._message_event_socket())
