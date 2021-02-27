@@ -126,7 +126,8 @@ class Mirai(App):
                             section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = GroupMessageRecvEvent(
                                 unify.unify_event_dict(response))
-                            activeCommand = Loader.groupCommands[mostMatch]
+                            if len(mostMatch) != 0:
+                                activeCommand = Loader.groupCommands[mostMatch]
                         else:
                             for cmdStr in Loader.contactCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
@@ -134,7 +135,8 @@ class Mirai(App):
                             section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = ContactMessageRecvEvent(
                                 unify.unify_event_dict(response))
-                            activeCommand = Loader.contactCommands[mostMatch]
+                            if len(mostMatch) != 0:
+                                activeCommand = Loader.contactCommands[mostMatch]
                     if activeCommand is not None:
                         await activeCommand(self, e)
                         continue
@@ -143,7 +145,7 @@ class Mirai(App):
                     continue
 
             if hasattr(Mirai2CoreEvents, eventName):
-                e = Mirai2CoreEvents[eventName].value[0](
+                e = Mirai2CoreEvents[eventName].value(
                     unify.unify_event_dict(response))
                 listeners = Loader.eventsListener.get(eventName)
 
