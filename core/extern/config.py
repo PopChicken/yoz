@@ -7,11 +7,6 @@ from pathlib import Path
 
 class Config:
     __configPath = './config'
-
-    @classmethod
-    def init(cls):
-        if not os.path.exists(Config.__configPath):
-            os.makedirs(Config.__configPath)
     
     @classmethod
     def update(cls, default: dict, loaded: dict) -> dict:
@@ -25,10 +20,9 @@ class Config:
                 new[key] = loaded[key]
         return new
 
-    moduleName: str
-
     def __init__(self, moduleName: str) -> None:
         self.moduleName = moduleName
+
         moduleFolder = f'{Config.__configPath}/{self.moduleName}'
         if not os.path.exists(moduleFolder):
             os.makedirs(moduleFolder)
@@ -48,5 +42,3 @@ class Config:
     def backup(self, fileName: str) -> None:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
         shutil.copyfile(path, f'{path}.bkp')
-
-Config.init()
