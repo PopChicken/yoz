@@ -115,9 +115,9 @@ class Message:
         self.uid: int
 
         if chain is not None and raw is None:
+            self.uid = chain[0]['id']
             for msgDict in chain:
                 try:
-                    self.uid = msgDict['messageChain'][0]['id']
                     type = msgDict['type']
                     if type == Message.__TYPE_SOURCE:
                         continue
