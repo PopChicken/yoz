@@ -117,7 +117,7 @@ class Mirai(App):
                     mostMatch = ''
                     section1 = response['messageChain'][1]
                     if section1['type'] == 'Plain' \
-                            and section1['text'][0] == s.CMD_HEAD:
+                            and section1['text'][0] in s.CMD_HEAD:
                         text = section1['text'][1:]
                         if eventName == 'GroupMessage':
                             for cmdStr in Loader.groupCommands.keys():
