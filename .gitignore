@@ -1,4 +1,5 @@
 *.yaml
+*.db
 **/__pycache__/
 .VSCodeCounter/
 .vscode/
