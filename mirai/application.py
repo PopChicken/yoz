@@ -3,6 +3,7 @@ import asyncio
 import json
 import requests
 import pydblite
+import copy
 
 import mirai.settings as s
 import mirai.unify as unify
@@ -196,9 +197,12 @@ class Mirai(App):
             "target": group,
             "messageChain": message.chain()
         }
-        requests.post(f'{s.HTTP_URL}/sendGroupMessage', json=fMsg)
+        resp = requests.post(f'{s.HTTP_URL}/sendGroupMessage', json=fMsg).json()
+        message = copy.deepcopy(message)
+        message.uid = resp['messageId']
+        return message
 
-    def mute(self, group: int, id: int, time: int):
+    def mute(self, group: int, id: int, time: int) -> None:
         fMsg = {
             "sessionKey": self.sessionKey,
             "target": group,
@@ -207,7 +211,7 @@ class Mirai(App):
         }
         requests.post(f'{s.HTTP_URL}/mute', json=fMsg)
 
-    def unmute(self, group: int, id: int):
+    def unmute(self, group: int, id: int) -> None:
         fMsg = {
             "sessionKey": self.sessionKey,
             "target": group,
@@ -215,14 +219,14 @@ class Mirai(App):
         }
         requests.post(f'{s.HTTP_URL}/unmute', json=fMsg)
 
-    def muteAll(self, group: int):
+    def muteAll(self, group: int) -> None:
         fMsg = {
             "sessionKey": self.sessionKey,
             "target": group
         }
         requests.post(f'{s.HTTP_URL}/muteAll', json=fMsg)
 
-    def unmuteAll(self, group: int):
+    def unmuteAll(self, group: int) -> None:
         fMsg = {
             "sessionKey": self.sessionKey,
             "target": group
@@ -231,7 +235,7 @@ class Mirai(App):
 
     # mirai-http-api 有/sendFriendMessage 与 /sendTempMessage 分别对应好友与临时消息.
     # TODO 临时消息尚无模型，建议tg接口中的临时消息接口直接调用sendContactMessage，mirai接口中分别实现。
-    def sendContactMessage(self, contact, message) -> None:
+    def sendContactMessage(self, contact, message) -> Message:
         if not isinstance(message, Message):
             message = Message(raw=message)
         message: Message
@@ -240,7 +244,10 @@ class Mirai(App):
             "target": contact,
             "messageChain": message.chain()
         }
-        requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg)
+        resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+        message = copy.deepcopy(message)
+        message.uid = resp['messageId']
+        return message
 
     def recall(self, messageId: int) -> None:
         """撤回消息"""

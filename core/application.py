@@ -35,16 +35,16 @@ class App(ABC):
     
     @abstractmethod
     @overload
-    def sendGroupMessage(self, group: int, message: Message) -> None:
+    def sendGroupMessage(self, group: int, message: Message) -> Message:
         pass
 
     @abstractmethod
     @overload
-    def sendGroupMessage(self, group: int, message: str) -> None:
+    def sendGroupMessage(self, group: int, message: str) -> Message:
         pass
 
     @abstractmethod
-    def sendGroupMessage(self, group, message) -> None:
+    def sendGroupMessage(self, group, message) -> Message:
         """发送群消息"""
         pass
     
@@ -69,16 +69,16 @@ class App(ABC):
 
     @abstractmethod
     @overload
-    def sendContactMessage(self, contact: int, message: Message) -> None:
+    def sendContactMessage(self, contact: int, message: Message) -> Message:
         pass
     
     @abstractmethod
     @overload
-    def sendContactMessage(self, contact: int, message: str) -> None:
+    def sendContactMessage(self, contact: int, message: str) -> Message:
         pass
 
     @abstractmethod
-    def sendContactMessage(self, contact, message) -> None:
+    def sendContactMessage(self, contact, message) -> Message:
         """发送联系人消息"""
         pass
 
@@ -88,7 +88,7 @@ class App(ABC):
         pass
 
     @abstractmethod
-    def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> None:
+    def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> Message:
         """发送URL图片"""
         pass
 

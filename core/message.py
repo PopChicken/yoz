@@ -112,10 +112,12 @@ class Message:
 
     def __init__(self, chain: List[dict] = None, raw: str = None) -> None:
         self.msgChain: List[BaseMsg] = []
+        self.uid: int
 
         if chain is not None and raw is None:
             for msgDict in chain:
                 try:
+                    self.uid = msgDict['messageChain'][0]['id']
                     type = msgDict['type']
                     if type == Message.__TYPE_SOURCE:
                         continue
