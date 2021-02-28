@@ -1,6 +1,7 @@
 
 from typing import List
 from core.message import Message
+from copy import deepcopy
 
 
 __PERMISSION_MAP = {
@@ -11,7 +12,7 @@ __PERMISSION_MAP = {
 
 
 def unify_event_dict(event_dict: dict) -> dict:
-    event_dict = event_dict.copy()
+    event_dict = deepcopy(event_dict)
     if 'sender' in event_dict:
         sender = event_dict['sender']
         if 'permission' in sender:
