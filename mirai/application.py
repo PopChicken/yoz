@@ -1,4 +1,3 @@
-from asyncio.tasks import wait
 import websockets
 import asyncio
 import json
@@ -243,9 +242,8 @@ class Mirai(App):
         }
         requests.post(f'{s.HTTP_URL}/unmuteAll', json=fMsg)
 
-    # mirai-http-api 有/sendFriendMessage 与 /sendTempMessage 分别对应好友与临时消息.
     # TODO 临时消息尚无模型，建议tg接口中的临时消息接口直接调用sendContactMessage，mirai接口中分别实现。
-    def sendContactMessage(self, contact, message) -> Message:
+    def sendContactMessage(self, contact: int, message, group: int=None) -> Message:
         if not isinstance(message, Message):
             message = Message(raw=message)
         message: Message
@@ -253,25 +251,50 @@ class Mirai(App):
             "sessionKey": self.sessionKey,
             "messageChain": message.chain()
         }
-        temp = False
-        for frameInfo in inspect.stack(0):
-            if frameInfo.function == self._message_event_socket.__name__\
-               and isinstance(frameInfo.frame.f_locals['self'], Mirai):
-                data = frameInfo.frame.f_locals['data']
-                if 'originGroupId' in data:
-                    groupId = data['originGroupId']
-                    temp = True
-                break
-        if temp:
-            fMsg['group'] = groupId
+
+        if group is not None:
+            fMsg['group'] = group
             fMsg['qq'] = contact
             resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
         else:
-            fMsg['target'] = contact
-            resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+            temp = False
+            for frameInfo in inspect.stack(0):
+                if frameInfo.function == self._message_event_socket.__name__\
+                and isinstance(frameInfo.frame.f_locals['self'], Mirai):
+                    data = frameInfo.frame.f_locals['data']
+                    if 'originGroupId' in data:
+                        groupId = data['originGroupId']
+                        temp = True
+                    break
+            if temp:
+                fMsg['group'] = groupId
+                fMsg['qq'] = contact
+                resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+            else:
+                fMsg['target'] = contact
+                resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
+
+    def replyContactMessage(self, sender: Contact, message) -> Message:
+        if not isinstance(message, Message):
+            message = Message(raw=message)
+        message: Message
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "messageChain": message.chain()
+        }
+        if sender.fromGroup is not None:
+            fMsg['group'] = sender.fromGroup
+            fMsg['qq'] = sender.id
+            resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+        else:
+            fMsg['target'] = sender.id
+            resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+        message = copy.deepcopy(message)
+        message.uid = resp['messageId']
+        return message  
 
     def recall(self, messageId: int) -> None:
         """撤回消息"""

@@ -56,11 +56,14 @@ class ContactMessageRecvEvent(BaseEvent):
         id = senderInfo['id']
         nickname = senderInfo['nickname']
         remark = senderInfo['remark']
-
+        fromGroup = None
+        if 'group' in senderInfo:
+            fromGroup = senderInfo['group']['id']
         self.msg = Message(chain=data['messageChain'])
         self.sender = Contact(
             id=id,
             nickname=nickname,
-            remark=remark
+            remark=remark,
+            fromGroup=fromGroup
         )
 

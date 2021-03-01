@@ -3,7 +3,6 @@ from typing import Callable, Dict, List, overload
 from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
-from pydantic import BaseModel
 
 
 class App(ABC):
@@ -69,17 +68,22 @@ class App(ABC):
 
     @abstractmethod
     @overload
-    def sendContactMessage(self, contact: int, message: Message) -> Message:
+    def sendContactMessage(self, contact: int, message: Message, group: int=None) -> Message:
         pass
     
     @abstractmethod
     @overload
-    def sendContactMessage(self, contact: int, message: str) -> Message:
+    def sendContactMessage(self, contact: int, message: str, group: int=None) -> Message:
         pass
 
     @abstractmethod
-    def sendContactMessage(self, contact, message) -> Message:
-        """发送联系人消息"""
+    def sendContactMessage(self, contact, message, group: int=None) -> Message:
+        """发送联系人消息（group参数适配mirai）"""
+        pass
+
+    @abstractmethod
+    def replyContactMessage(self, sender: Contact, message) -> Message:
+        """回复联系人消息"""
         pass
 
     @abstractmethod

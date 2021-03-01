@@ -38,5 +38,4 @@ def unifyTemp2FriendEvent(event_dict: dict) -> dict:
     event_dict['sender']['remark'] = ''
     del event_dict['sender']['memberName']
     del event_dict['sender']['permission']
-    del event_dict['sender']['group']
     return event_dict
