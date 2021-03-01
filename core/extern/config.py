@@ -30,14 +30,14 @@ class Config:
     def getf(self, fileName: str) -> io.TextIOWrapper:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
         if os.path.exists(path):
-            return open(path, 'r+')
+            return open(path, 'r+', encoding='utf-8')
         else:
             return None
     
     def touch(self, fileName: str) -> io.TextIOWrapper:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
         Path(path).touch()
-        return open(path, 'r+')
+        return open(path, 'r+', encoding='utf-8')
     
     def backup(self, fileName: str) -> None:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
