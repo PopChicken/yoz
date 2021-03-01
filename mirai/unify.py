@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import Any, Callable, List
 from core.message import Message
 from copy import deepcopy
 
@@ -7,11 +7,12 @@ from copy import deepcopy
 __PERMISSION_MAP = {
     'OWNER': 'Owner',
     'ADMINISTRATOR': 'Admin',
+    'ADMIN': 'Admin',
     'MEMBER': 'Member'
 }
 
 
-def unify_event_dict(event_dict: dict) -> dict:
+def unifyEventDict(event_dict: dict) -> dict:
     event_dict = deepcopy(event_dict)
     if 'sender' in event_dict:
         sender = event_dict['sender']
@@ -25,5 +26,17 @@ def unify_event_dict(event_dict: dict) -> dict:
                     __PERMISSION_MAP[group['permission'].upper()]
     return event_dict
 
-def unify_message2chain(message: Message) -> List[dict]:
+
+def unifyMessage2Chain(message: Message) -> List[dict]:
     pass
+
+
+def unifyTemp2FriendEvent(event_dict: dict) -> dict:
+    event_dict = deepcopy(event_dict)
+    event_dict['type'] = 'FriendMessage'
+    event_dict['sender']['nickname'] = event_dict['sender']['memberName']
+    event_dict['sender']['remark'] = ''
+    del event_dict['sender']['memberName']
+    del event_dict['sender']['permission']
+    del event_dict['sender']['group']
+    return event_dict

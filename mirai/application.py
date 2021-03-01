@@ -1,9 +1,11 @@
+from asyncio.tasks import wait
 import websockets
 import asyncio
 import json
 import requests
 import pydblite
 import copy
+import inspect
 
 import mirai.settings as s
 import mirai.unify as unify
@@ -86,6 +88,14 @@ class Mirai(App):
             except Exception as e:
                 print('Websocket 通讯中出错:', e)
 
+            # 初始化 data
+            data: dict = {}
+
+            # Middleware: temp message filter here
+            if response['type'] == 'TempMessage':
+                data['originGroupId'] = response['sender']['group']['id']
+                response = unify.unifyTemp2FriendEvent(response)
+
             eventName = response['type']
 
             # 检查是否满足redirector
@@ -96,8 +106,8 @@ class Mirai(App):
                 if len(rec) != 0:
                     rec = rec[0]
                     e = GroupMessageRecvEvent(
-                        unify.unify_event_dict(response))
-                    rec['hook'](self, e)
+                        unify.unifyEventDict(response))
+                    await rec['hook'](self, e)
                     continue
                 
             elif eventName == 'FriendMessage':
@@ -106,15 +116,15 @@ class Mirai(App):
                 if len(rec) != 0:
                     rec = rec[0]
                     e = ContactMessageRecvEvent(
-                        unify.unify_event_dict(response))
-                    rec['hook'](self, e)
+                        unify.unifyEventDict(response))
+                    await rec['hook'](self, e)
                     continue
             
             # 尝试匹配指令
             if eventName == 'GroupMessage' or eventName == 'FriendMessage':
                 # TODO use Trie tree to optimize command match
+                activeCommand: Callable = None
                 try:
-                    activeCommand: Callable = None
                     mostMatch = ''
                     section1 = response['messageChain'][1]
                     if section1['type'] == 'Plain' \
@@ -126,7 +136,7 @@ class Mirai(App):
                                     mostMatch = cmdStr
                             section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = GroupMessageRecvEvent(
-                                unify.unify_event_dict(response))
+                                unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
                                 activeCommand = Loader.groupCommands[mostMatch]
                         else:
@@ -135,19 +145,19 @@ class Mirai(App):
                                     mostMatch = cmdStr
                             section1['text'] = section1['text'][len(mostMatch)+1:]
                             e = ContactMessageRecvEvent(
-                                unify.unify_event_dict(response))
+                                unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
                                 activeCommand = Loader.contactCommands[mostMatch]
-                    if activeCommand is not None:
-                        await activeCommand(self, e)
-                        continue
                 except Exception as e:
                     print("指令识别出错: ", e)
+                    continue
+                if activeCommand is not None:
+                    await activeCommand(self, e)
                     continue
 
             if hasattr(Mirai2CoreEvents, eventName):
                 e = Mirai2CoreEvents[eventName].value(
-                    unify.unify_event_dict(response))
+                    unify.unifyEventDict(response))
                 listeners = Loader.eventsListener.get(eventName)
 
                 if listeners is not None:
@@ -158,9 +168,6 @@ class Mirai(App):
         await asyncio.gather(*(listener(self) for listener in listeners))
 
     def run(self):
-        # init modules
-        asyncio.get_event_loop().run_until_complete(self._init_modules())
-
         auth = {
             'authKey': s.AUTH_KEY
         }
@@ -182,6 +189,9 @@ class Mirai(App):
                 raise Exception(resp['msg'])
         except Exception as e:
             print("认证 session 时发生错误: ", e)
+
+        # init modules
+        asyncio.get_event_loop().run_until_complete(self._init_modules())
 
         asyncio.get_event_loop().run_until_complete(self._message_event_socket())
 
@@ -241,10 +251,24 @@ class Mirai(App):
         message: Message
         fMsg = {
             "sessionKey": self.sessionKey,
-            "target": contact,
             "messageChain": message.chain()
         }
-        resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+        temp = False
+        for frameInfo in inspect.stack(0):
+            if frameInfo.function == self._message_event_socket.__name__\
+               and isinstance(frameInfo.frame.f_locals['self'], Mirai):
+                data = frameInfo.frame.f_locals['data']
+                if 'originGroupId' in data:
+                    groupId = data['originGroupId']
+                    temp = True
+                break
+        if temp:
+            fMsg['group'] = groupId
+            fMsg['qq'] = contact
+            resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+        else:
+            fMsg['target'] = contact
+            resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
