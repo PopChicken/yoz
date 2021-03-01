@@ -8,4 +8,5 @@ NICKNAME = '猫猫'
 WS_URL = f'ws://{HOST}:{PORT}'
 HTTP_URL = f'http://{HOST}:{PORT}'
 
-CMD_HEAD = ['.', '。', '/', '#']
+CMD_HEAD = '.'
+ALT_CMD_HEAD = ['。', '#', '/']

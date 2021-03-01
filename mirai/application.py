@@ -118,7 +118,7 @@ class Mirai(App):
                     mostMatch = ''
                     section1 = response['messageChain'][1]
                     if section1['type'] == 'Plain' \
-                            and section1['text'][0] in s.CMD_HEAD:
+                            and (section1['text'][0] == s.CMD_HEAD or section1['text'][0] in s.ALT_CMD_HEAD):
                         text = section1['text'][1:]
                         if eventName == 'GroupMessage':
                             for cmdStr in Loader.groupCommands.keys():
@@ -188,7 +188,7 @@ class Mirai(App):
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
 
-    def sendGroupMessage(self, group: int, message):
+    def sendGroupMessage(self, group: int, message) -> Message:
         if not isinstance(message, Message):
             message = Message(raw=message)
         message: Message
@@ -257,6 +257,7 @@ class Mirai(App):
         }
         requests.post(f'{s.HTTP_URL}/recall', json=fMsg)
 
+    # /sendImageMessage 不返回信息id
     def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> None:
         """
         发送URL图片 
