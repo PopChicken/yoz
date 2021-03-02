@@ -1,5 +1,6 @@
 from . import (
     forest,
     repeater,
-    revolver
+    revolver,
+    search
 )
