@@ -1,3 +1,11 @@
+from .prob import (
+    lottery,
+    init,
+    getCongratulations,
+    getItemDetail,
+    getQualityDescription
+)
+
 import re
 import yaml
 import pydblite
@@ -29,6 +37,7 @@ config = Config(MODULE_NAME)
 sessions = SessionLib(MODULE_NAME)
 
 db = pydblite.Base(f'{data.getfo()}/{MODULE_NAME}.db')
+userdb = pydblite.Base(f'{data.getfo()}/user.db')
 crontab = Crontab()
 
 settings = {
@@ -78,10 +87,16 @@ def dbCommit():
 
 
 def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
+    info = db(groupId=groupId, memberId=memberId)[0]
     if type == 'success':
+        proc = info['duration'] / settings['max_time'] * 100
+        treeId, quality = lottery(proc, 50)
         app.sendGroupMessage(groupId, Message.phrase(
             RefMsg(target=memberId),
-            "的树长大啦！"
+            "的树长大啦！\n"
+            f"{getCongratulations(quality)}"
+            f"你获得了“{getQualityDescription(quality)}”品质的"
+            f"{getItemDetail(treeId)['name']}~"
         ))
     elif type == 'cancel':
         app.sendGroupMessage(groupId, Message.phrase(
@@ -92,7 +107,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
     else:
         return
 
-    del db[db(groupId=groupId, memberId=memberId)[0]['__id__']]
+    del db[info['__id__']]
 
 
 @Loader.listen('Load')
@@ -127,6 +142,20 @@ async def onLoad(app: App):
     settings['enabled_groups'].sort()
 
     conf.close()
+
+    try:
+        init(config)
+    except Exception as e:
+        print('加载树木信息时出现致命错误: ', e)
+        print('模块将无法正常运行，请立即终止进程')
+        return
+
+    if userdb.exists():
+        userdb.open()
+    else:
+        userdb.create('userid', 'bag', 'accumulate')
+        userdb.create_index('userid')
+        userdb.commit()
 
     if db.exists():
         db.open()
@@ -238,6 +267,7 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
 async def unplantCommand(app: App, e: ContactMessageRecvEvent):
 
     async def sessionHandler(app: App, e: ContactMessageRecvEvent):
+        sender = e.sender
         contactId = e.sender.id
         message = str(e.msg).strip()
         session = sessions.getSession(contactId)
@@ -249,39 +279,40 @@ async def unplantCommand(app: App, e: ContactMessageRecvEvent):
             if str.isdigit(message):
                 id = int(message)
                 if 1 <= id <= optionCnt:
-                    app.sendContactMessage(contactId, 
+                    app.replyContactMessage(sender, 
                         ("你确定嘛？\n"
                          "输入“确定”放弃种树，输入其他内容取消操作")
                     )
                     session.set('groupId', options[id])
                     session.next()
                 else:
-                    app.sendContactMessage(contactId, "范围要正确哦~")
+                    app.replyContactMessage(sender, "范围要正确哦~")
             elif message == "取消":
-                app.sendContactMessage(contactId, "取消啦~")
+                app.replyContactMessage(sender, "取消啦~")
                 sessions.closeSession(contactId)
                 app.unredirect(str(contactId))
             else:
-                app.sendContactMessage(contactId, "输入的内容不正确~")
+                app.replyContactMessage(sender, "输入的内容不正确~")
         elif step == 2:
             if message == "确定":
-                app.sendContactMessage(contactId, "臭水群怪，给你解除禁言了喔~")
+                app.replyContactMessage(sender, "臭水群怪，给你解除禁言了喔~")
                 groupId = session.get('groupId')
                 plantComplete(app, groupId, contactId, type='cancel')
                 sessions.closeSession(contactId)
                 app.unredirect(str(contactId))
                 crontab.remove(f'{groupId}.{contactId}')
             else:
-                app.sendContactMessage(contactId, "未输入确定，操作取消啦~继续专注喔~")
+                app.replyContactMessage(sender, "未输入确定，操作取消啦~继续专注喔~")
                 sessions.closeSession(contactId)
                 app.unredirect(str(contactId))
 
+    sender = e.sender
     contactId = e.sender.id
     session = sessions.createSession(contactId)
     records = db(memberId=contactId)
 
     if len(records) == 0:
-        app.sendContactMessage(contactId, "你没有在种的树哦~")
+        app.replyContactMessage(sender, "你没有在种的树哦~")
         return
 
     options: Dict[int, int] = {}
@@ -297,7 +328,7 @@ async def unplantCommand(app: App, e: ContactMessageRecvEvent):
     session.set('optionCnt', optCnt)
     session.next()
     
-    app.sendContactMessage(e.sender.id, Message.phrase(
+    app.replyContactMessage(sender, Message.phrase(
         ("你有以下几个正在种树的群\n"
          + reply +
          "请输入序号(仅数字)\n"
