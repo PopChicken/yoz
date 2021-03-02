@@ -1,4 +1,5 @@
-*.yaml
+!trees.yml
+*.yml
 *.db
 **/__pycache__/
 .VSCodeCounter/

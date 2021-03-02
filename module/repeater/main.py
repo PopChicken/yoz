@@ -69,9 +69,9 @@ async def onLoad(app: App):
 
     haveError = False
 
-    conf = config.getf('conf.yaml')
+    conf = config.getf('conf.yml')
     if conf is None:
-        conf = config.touch('conf.yaml')
+        conf = config.touch('conf.yml')
     else:
         newSettings = yaml.load(conf, Loader=yaml.FullLoader)
         try:
@@ -79,7 +79,7 @@ async def onLoad(app: App):
         except Exception as e:
             print('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
             try:
-                config.backup('conf.yaml')
+                config.backup('conf.yml')
             except Exception as e:
                 print('备份失败，使用默认配置，取消覆写 conf.yml')
 
