@@ -1,3 +1,4 @@
+config/
 !trees.yml
 *.yml
 *.db

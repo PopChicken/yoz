@@ -3,6 +3,7 @@ import yaml
 
 from bisect import bisect_left
 from typing import Any
+from urllib.parse import quote
 
 from core.message import Message
 from core.message import RefMsg
@@ -62,7 +63,7 @@ def genMsg(search_str: str, search_engine: str) -> str:
         'bilibili': 'https://search.bilibili.com/all?keyword=',
     }
     msg = f'正在从 {search_engine} 中搜索...\n'
-    return msg+prefix[search_engine]+search_str
+    return msg+prefix[search_engine]+quote(search_str)
 
 def existElem(l: list, elem: Any) -> bool:
     i = bisect_left(l, elem)
