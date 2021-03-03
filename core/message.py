@@ -173,6 +173,13 @@ class Message:
                 self.msgChain.append(
                     Message.__CONVERTOR[typeName](properties))
 
+    def getAtCodes(self) -> list:
+        codes = []
+        for msg in self.msgChain:
+            if isinstance(msg, RefMsg):
+                codes.append(msg)
+        return codes
+
     @classmethod
     def phrase(cls, *obj):
         msg = cls()
