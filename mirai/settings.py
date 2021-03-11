@@ -10,3 +10,8 @@ HTTP_URL = f'http://{HOST}:{PORT}'
 
 CMD_HEAD = '.'
 ALT_CMD_HEAD = ['。', '#', '/']
+
+BLACK_LIST = [
+    1713688770,
+    1252361674
+]

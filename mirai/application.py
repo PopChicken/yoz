@@ -90,6 +90,10 @@ class Mirai(App):
             # 初始化 data
             data: dict = {}
 
+            if response['type'][-7:] == 'Message':
+                if response['sender']['id'] in s.BLACK_LIST:
+                    continue
+
             # Middleware: temp message filter here
             if response['type'] == 'TempMessage':
                 data['originGroupId'] = response['sender']['group']['id']
