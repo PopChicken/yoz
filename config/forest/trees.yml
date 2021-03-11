@@ -16,7 +16,7 @@ notification:
   7: 闻所未闻的东西欸，这是什么...？
 prob:
   1: 100.0
-  2: 30.0
+  2: 40.0
   3: 20.0
   4: 10.0
   5: 5.0
@@ -26,7 +26,7 @@ item:
   1:
     1001: { name: 拖把树, quality: 1, value: 0 }
     1002: { name: 破布树, quality: 1, value: 0 }
-    1003: { name: 男酮树, quality: 1, value: 0 }
+    1003: { name: 男酮倪哥树, quality: 1, value: 0 }
     1004: { name: 枯树, quality: 1, value: 0 }
     1005: { name: 假树, quality: 1, value: 0 }
     1006: { name: 蛀虫树, quality: 1, value: 0 }
@@ -45,11 +45,12 @@ item:
     3005: { name: 紫檀木, quality: 3, value: 10 }
     3006: { name: 香果树, quality: 3, value: 10 }
   4:
-    4001: { name: 圣诞树, quality: 4, value: 10 }
+    4001: { name: 圣诞树, quality: 4, value: 30 }
     4002: { name: 西府海棠, quality: 4, value: 30 }
     4003: { name: 彩虹桉树, quality: 4, value: 30 }
     4004: { name: 樱花树, quality: 4, value: 30 }
     4005: { name: 龙血树, quality: 4, value: 30 }
+    4006: { name: 藤本树, quality: 4, value: 30 }
   5:
     5001: { name: 雷曼将军树, quality: 5, value: 100 }
     5002: { name: 月之女神杜鹃花树, quality: 5, value: 100 }
@@ -65,9 +66,17 @@ item:
     7002: { name: 世界之树, quality: 7, value: 99999 }
     7003: { name: 猫猫神树, quality: 7, value: 99999 }
 mask:
+  0.05:
+    1: 1.0
+    2: 0.1
+    3: 0.0
+    4: 0.0
+    5: 0.0
+    6: 0.0
+    7: 0.0
   0.1:
     1: 1.0
-    2: 0.2
+    2: 0.3
     3: 0.1
     4: 0.0
     5: 0.0
@@ -75,7 +84,7 @@ mask:
     7: 0.0
   0.5:
     1: 1.0
-    2: 0.5
+    2: 0.6
     3: 0.3
     4: 0.1
     5: 0.0
@@ -132,7 +141,7 @@ mask:
   100:
     1: 1.0
     2: 2.0
-    3: 3.0
+    3: 4.0
     4: 5.0
     5: 4.0
     6: 1.0

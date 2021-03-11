@@ -43,7 +43,8 @@ crontab = Crontab()
 settings = {
     'enabled_groups': [],
     'max_time': 2 * 24 * 60 * 60,  # 单位s
-    'min_time': 1 * 1 * 30 * 60
+    'min_time': 1 * 1 * 30 * 60,
+    'admin': 0
 }
 
 
@@ -82,7 +83,7 @@ def formatTime(sec: int):
 
 def dbCommit():
     while True:
-        time.sleep(30)
+        time.sleep(10)
         db.commit()
 
 
@@ -90,7 +91,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
     info = db(groupId=groupId, memberId=memberId)[0]
     if type == 'success':
         proc = info['duration'] / settings['max_time'] * 100
-        treeId, quality = lottery(proc, 50)
+        treeId, quality = lottery(proc)
         app.sendGroupMessage(groupId, Message.phrase(
             RefMsg(target=memberId),
             "的树长大啦！\n"
@@ -98,6 +99,21 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
             f"你获得了“{getQualityDescription(quality)}”品质的"
             f"{getItemDetail(treeId)['name']}~"
         ))
+        record = userdb(userid=memberId)
+        if len(record) != 0:
+            record = record[0]
+            if treeId not in record['bag']:
+                record['bag'][treeId] = 1
+            else:
+                record['bag'][treeId] += 1
+            record['accumulate'] += info['duration']
+        else:
+            userdb.insert(
+                userid=memberId,
+                bag={ treeId: 1 },
+                accumulate=info['duration']
+            )
+        userdb.commit()
     elif type == 'cancel':
         app.sendGroupMessage(groupId, Message.phrase(
             RefMsg(target=memberId),
@@ -210,7 +226,8 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
              f"时长需要在{formatTime(settings['min_time'])}"
              f"到{formatTime(settings['max_time'])}之间\n"
              f"私聊我，使用“{app.commandHead}放弃种树”指令可以放弃~\n"
-             "未来会在种树结束获得一颗树哦~")
+             f"私聊或者在群中使用“{app.commandHead}逛树林”可以查看自己拥有的树喔~\n"
+             "种树结束会获得一颗树哦，种树时间越久越容易出现珍稀品种~")
         ))
         return
 
@@ -262,6 +279,66 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
     crontab.add(f'{groupId}.{memberId}', sec,
                 plantComplete, (app, groupId, memberId))
 
+
+@Loader.command("逛树林", CommandType.Group)
+async def groupViewTrees(app: App, e: GroupMessageRecvEvent):
+    name = '你'
+    msg = e.msg
+    msg.chain()
+    record = userdb(userid=e.sender.id)
+    empty = True
+    
+    if len(record) > 0:
+        reply = "你的树林里有以下树木👇\n"
+        bag = record[0]['bag']
+        ids = list(bag.keys())
+        ids.sort(reverse=True)
+        for treeId in bag:
+            cnt = bag[treeId]
+            if cnt > 0:
+                empty = False
+                item = getItemDetail(treeId)
+                reply += f"  【{getQualityDescription(item['quality'])}】{item['name']}×{cnt}\n"
+        reply = reply[:-1]
+    if empty:
+        app.sendGroupMessage(e.group.id, Message.phrase(
+            RefMsg(target=e.sender.id), "哎呀，你的树林空空如也呢，快去种树吧~")
+        )
+    else:
+        app.sendGroupMessage(e.group.id, Message.phrase(
+            RefMsg(target=e.sender.id), reply)
+        )
+
+
+@Loader.command("逛树林", CommandType.Contact)
+async def contactViewTrees(app: App, e: ContactMessageRecvEvent):
+    record = userdb(userid=e.sender.id)
+    empty = True
+    
+    if len(record) > 0:
+        reply = "你的树林里有以下树木👇\n"
+        bag = record[0]['bag']
+        ids = list(bag.keys())
+        ids.sort(reverse=True)
+        for treeId in ids:
+            cnt = bag[treeId]
+            if cnt > 0:
+                empty = False
+                item = getItemDetail(treeId)
+                reply += f"  【{getQualityDescription(item['quality'])}】{item['name']}×{cnt}\n"
+        reply = reply[:-1]
+    if empty:
+        app.replyContactMessage(e.sender, "哎呀，你的树林空空如也呢，快去种树吧~")
+    else:
+        app.replyContactMessage(e.sender, reply)
+
+
+@Loader.command("加速卡", CommandType.Group)
+async def useCard(app: App, e: ContactMessageRecvEvent):
+    arg = str(e.msg).strip()
+    if len(arg) == 0:
+        return
+    # m = re.match(r'', arg)
 
 @Loader.command("放弃种树", CommandType.Contact)
 async def unplantCommand(app: App, e: ContactMessageRecvEvent):
