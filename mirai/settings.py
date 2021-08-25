@@ -1,5 +1,5 @@
 HOST = 'localhost'
-PORT = 8081
+PORT = 8089
 AUTH_KEY = 'zJdAWmCXz92DAW3vT'
 
 BOT_ID = 1516161873

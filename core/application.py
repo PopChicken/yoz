@@ -46,6 +46,10 @@ class App(ABC):
     def sendGroupMessage(self, group, message) -> Message:
         """发送群消息"""
         pass
+
+    @abstractmethod
+    def setSpecialTitle(self, group: int, id: int, title: str) -> None:
+        pass
     
     @abstractmethod
     def mute(self, group: int, id: int, time: int) -> None:

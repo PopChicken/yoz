@@ -21,6 +21,10 @@ from core.entity.group import Group, Member
 from core.entity.contact import Contact
 
 
+import os
+os.environ["http_proxy"] = "http://127.0.0.1:8888"
+os.environ["https_proxy"] = "http://127.0.0.1:8888"
+
 class Mirai(App):
 
     def __init__(self) -> None:
@@ -77,13 +81,16 @@ class Mirai(App):
 
     async def _message_event_socket(self):
         try:
-            receiver = await websockets.connect(f'{s.WS_URL}/all?sessionKey={self.sessionKey}')
+            receiver = await websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}')
+            response = await receiver.recv()
+            response = json.loads(response)
+            self.sessionKey = response['data']['session']
         except Exception as e:
             print('Websocket 连接出错:', e)
         while True:
             try:
                 response = await receiver.recv()
-                response = json.loads(response)
+                response = json.loads(response)['data']
             except Exception as e:
                 print('Websocket 通讯中出错:', e)
 
@@ -171,11 +178,12 @@ class Mirai(App):
         await asyncio.gather(*(listener(self) for listener in listeners))
 
     def run(self):
+        """
         auth = {
-            'authKey': s.AUTH_KEY
+            'verifyKey': s.AUTH_KEY
         }
         try:
-            resp = requests.post(f'{s.HTTP_URL}/auth', json=auth).json()
+            resp = requests.post(f'{s.HTTP_URL}/verify', json=auth).json()
             if resp['code'] != 0:
                 raise Exception(resp['msg'])
             self.sessionKey = resp['session']
@@ -192,6 +200,7 @@ class Mirai(App):
                 raise Exception(resp['msg'])
         except Exception as e:
             print("认证 session 时发生错误: ", e)
+        """
 
         # init modules
         asyncio.get_event_loop().run_until_complete(self._init_modules())
@@ -214,6 +223,17 @@ class Mirai(App):
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
+
+    def setSpecialTitle(self, group: int, id: int, title: str) -> None:
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group,
+            "memberId": id,
+            "info": {
+                "specialTitle": title
+            }
+        }
+        requests.post(f'{s.HTTP_URL}/memberInfo', json=fMsg)
 
     def mute(self, group: int, id: int, time: int) -> None:
         fMsg = {
