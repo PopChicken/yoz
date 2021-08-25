@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 import re
 import yaml
 
@@ -16,7 +17,8 @@ from core.entity.group import PermissionType
 config = Config('title')
 
 settings = {
-    'enabled_groups': []
+    'enabled_groups': [],
+    'master': 0,
 }
 
 @Loader.listen('Load')
@@ -65,7 +67,7 @@ def existElem(l: list, elem: Any) -> bool:
 @Loader.command("赐名", CommandType.Group)
 async def plantCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
-    message = str(e.msg).strip()
+    masterId = settings['master']
 
     if not existElem(settings['enabled_groups'], groupId):
         return
@@ -73,9 +75,35 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
     if e.group.permission == PermissionType.Member:
         app.sendGroupMessage(groupId, Message.phrase(
             RefMsg(target=e.sender.id),
-            "需要管理员权限才能执行该指令嗷~"
+            " 需要管理员权限才能执行该指令嗷~"
+        ))
+        return
+
+    if (masterId == 0 and e.sender.permission == PermissionType.Member) \
+        or (masterId != 0 and masterId != e.sender.id):
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
+            " 你没有权限哟~"
         ))
         return
     
-    
+    if len(e.msg.msgChain) == 0:
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
+            " 格式是\"赐名 @成员 头衔\"哦~"
+        ))
+        return
 
+    atCodes = e.msg.getAtCodes()
+    if (len(atCodes) != 1):
+        app.sendGroupMessage(groupId, Message.phrase(
+            RefMsg(target=e.sender.id),
+            " 格式不对喔~"
+        ))
+        return
+
+    app.setSpecialTitle(groupId, atCodes[0].target, str(e.msg.msgChain[2]).strip())
+    app.sendGroupMessage(groupId, Message.phrase(
+        RefMsg(target=e.sender.id),
+        " 操作成功~"
+    ))
