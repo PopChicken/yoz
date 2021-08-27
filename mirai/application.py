@@ -168,13 +168,16 @@ class Mirai(App):
             if hasattr(Mirai2CoreEvents, eventName):
                 e = Mirai2CoreEvents[eventName].value(
                     unify.unifyEventDict(response))
-                listeners = Loader.eventsListener.get(eventName)
-
+                listeners = []
+                for _, elisteners in Loader.eventsListener.get(eventName):
+                    listeners += elisteners
                 if listeners is not None:
                     await asyncio.gather(*(listener(self, e) for listener in listeners))
 
     async def _init_modules(self) -> None:
-        listeners = Loader.eventsListener.get('Load')
+        listeners = []
+        for _, elisteners in Loader.eventsListener.get('Load').items():
+            listeners += elisteners
         await asyncio.gather(*(listener(self) for listener in listeners))
 
     def run(self):

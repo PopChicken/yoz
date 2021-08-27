@@ -1,0 +1,8 @@
+{
+    "name": "repeater",
+    "altername": "复读机",
+    "version": "0.1-beta",
+    "author": "noam",
+    "description": "概率复读带冷却",
+    "website": "jnn.icu"
+}
