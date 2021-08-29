@@ -1,15 +1,39 @@
+import logging
+import coloredlogs
+
 from abc import ABC, abstractmethod
+from logging.handlers import QueueHandler, QueueListener
+from queue import Queue
 from typing import Callable, Dict, List, overload
 from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
+from core.log import PackagePathFilter
 
 
 class App(ABC):
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
     def __init__(self) -> None:
-        self.nickname: str
-        self.commandHead: str
+        self.nickname: str = ''
+        self.commandHead: str = ''
+
+        logQueue = Queue()
+
+        App.logger.addHandler(QueueHandler(logQueue))
+        App.logger.addFilter(PackagePathFilter())
+
+        cformatter = coloredlogs.ColoredFormatter('%(asctime)s  %(relativepath)s:%(lineno)s\t: %(levelname)s %(message)s')
+        chandler = logging.StreamHandler()
+        chandler.setFormatter(cformatter)
+
+        formatter = logging.Formatter('%(asctime)s  %(relativepath)s:%(lineno)s\t: %(levelname)s %(message)s')
+        fhandler = logging.FileHandler("yoz.log")
+        fhandler.setFormatter(formatter)
+
+        listener = QueueListener(logQueue, chandler, fhandler)
+        listener.start()
 
     @abstractmethod
     def run(self):

@@ -61,7 +61,7 @@ def checkBan(l: list, raw: str):
 
 
 @Loader.listen('Load')
-async def onLoad(app: App):
+def onLoad(app: App):
     global settings
     global groupInfo
 
@@ -77,11 +77,11 @@ async def onLoad(app: App):
         try:
             settings_tmp = config.update(settings, newSettings)
         except Exception as e:
-            print('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
+            app.logger.info('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
             try:
                 config.backup('conf.yml')
             except Exception as e:
-                print('备份失败，使用默认配置，取消覆写 conf.yml')
+                app.logger.info('备份失败，使用默认配置，取消覆写 conf.yml')
 
     conf.seek(0)
     conf.truncate()
@@ -100,11 +100,11 @@ async def onLoad(app: App):
     
     _thread.start_new_thread(cooldown_thread, ())
 
-    print('复读机加载成功')
+    app.logger.info('复读机加载成功')
 
 
 @Loader.listen('GroupMessage')
-async def onRecvGroupMessage(app: App, e: GroupMessageRecvEvent):
+def onRecvGroupMessage(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = e.msg
 

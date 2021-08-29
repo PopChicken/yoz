@@ -1,3 +1,5 @@
+import sys
+import traceback
 import websockets
 import asyncio
 import json
@@ -5,9 +7,11 @@ import requests
 import pydblite
 import copy
 import inspect
+import time
 
 import mirai.settings as s
 import mirai.unify as unify
+import core.tmanager as t
 
 from typing import Callable, List, Dict
 
@@ -28,12 +32,16 @@ os.environ["https_proxy"] = "http://127.0.0.1:8888"
 class Mirai(App):
 
     def __init__(self) -> None:
+        super(Mirai, self).__init__()
+
         self.commandHead: str = s.CMD_HEAD
         self.sessionKey: str = ''
         self.redirectors: Dict[str, (str, Callable)] = {}
         self.memberRedirectors = pydblite.Base(':memory:')
         self.contactRedirectors = pydblite.Base(':memory:')
         self.nickname: str = s.NICKNAME
+
+        self.threadManager = t.ThreadManager()
 
         self.memberRedirectors.create('guid', 'groupId', 'memberId', 'hook')
         self.contactRedirectors.create('guid', 'contactId', 'hook')
@@ -79,20 +87,27 @@ class Mirai(App):
                 if len(recs) != 0:
                     del self.memberRedirectors[recs[0]['__id__']]
 
-    async def _message_event_socket(self):
+    async def __message_event_socket(self):
         try:
+            App.logger.info("connecting mirai-http service...")
             receiver = await websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}')
             response = await receiver.recv()
             response = json.loads(response)
             self.sessionKey = response['data']['session']
+            self.__init_modules()
         except Exception as e:
-            print('Websocket 连接出错:', e)
+            App.logger.error('websocket connection error\n' + ''.join(traceback.format_exception(*sys.exc_info())))
+            App.logger.error('exiting...')
+            exit(0)
+        App.logger.info("event loop started")
         while True:
             try:
                 response = await receiver.recv()
                 response = json.loads(response)['data']
             except Exception as e:
-                print('Websocket 通讯中出错:', e)
+                print('websocket communication error, retrying:', e)
+                time.sleep(1.0)
+                continue
 
             # 初始化 data
             data: dict = {}
@@ -117,7 +132,7 @@ class Mirai(App):
                     rec = rec[0]
                     e = GroupMessageRecvEvent(
                         unify.unifyEventDict(response))
-                    await rec['hook'](self, e)
+                    self.threadManager.execute(rec['hook'], (self, e,))
                     continue
                 
             elif eventName == 'FriendMessage':
@@ -127,7 +142,7 @@ class Mirai(App):
                     rec = rec[0]
                     e = ContactMessageRecvEvent(
                         unify.unifyEventDict(response))
-                    await rec['hook'](self, e)
+                    self.threadManager.execute(rec['hook'], (self, e,))
                     continue
             
             # 尝试匹配指令
@@ -162,7 +177,7 @@ class Mirai(App):
                     print("指令识别出错: ", e)
                     continue
                 if activeCommand is not None:
-                    await activeCommand(self, e)
+                    self.threadManager.execute(activeCommand, (self, e,))
                     continue
 
             if hasattr(Mirai2CoreEvents, eventName):
@@ -171,11 +186,15 @@ class Mirai(App):
                 listeners = Loader.eventsListener.get(eventName)
 
                 if listeners is not None:
-                    await asyncio.gather(*(listener(self, e) for listener in listeners))
+                    for listener in listeners:
+                        self.threadManager.execute(listener, (self, e,))
 
-    async def _init_modules(self) -> None:
+    def __init_modules(self) -> None:
+        App.logger.info("initializing plugins...")
         listeners = Loader.eventsListener.get('Load')
-        await asyncio.gather(*(listener(self) for listener in listeners))
+        if listeners is not None:
+            for listener in listeners:
+                self.threadManager.execute(listener, (self,))
 
     def run(self):
         """
@@ -203,9 +222,8 @@ class Mirai(App):
         """
 
         # init modules
-        asyncio.get_event_loop().run_until_complete(self._init_modules())
-
-        asyncio.get_event_loop().run_until_complete(self._message_event_socket())
+        App.logger.info("starting yozbot console...")
+        asyncio.get_event_loop().run_until_complete(self.__message_event_socket())
 
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
@@ -283,7 +301,7 @@ class Mirai(App):
         else:
             temp = False
             for frameInfo in inspect.stack(0):
-                if frameInfo.function == self._message_event_socket.__name__\
+                if frameInfo.function == self.__message_event_socket.__name__\
                 and isinstance(frameInfo.frame.f_locals['self'], Mirai):
                     data = frameInfo.frame.f_locals['data']
                     if 'originGroupId' in data:

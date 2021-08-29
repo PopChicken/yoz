@@ -21,7 +21,7 @@ settings = {
 }
 
 @Loader.listen('Load')
-async def onLoad(app: App):
+def onLoad(app: App):
     global settings
 
     settings_tmp = settings.copy()
@@ -36,11 +36,11 @@ async def onLoad(app: App):
         try:
             settings_tmp = config.update(settings, newSettings)
         except Exception as e:
-            print('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
+            app.logger.info('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
             try:
                 config.backup('conf.yml')
             except Exception as e:
-                print('备份失败，使用默认配置，取消覆写 conf.yml')
+                app.logger.info('备份失败，使用默认配置，取消覆写 conf.yml')
 
     conf.seek(0)
     conf.truncate()
@@ -53,7 +53,7 @@ async def onLoad(app: App):
     
     conf.close()
 
-    print('Search加载成功')
+    app.logger.info('Search加载成功')
 
 def genMsg(search_str: str, search_engine: str) -> str:
     prefix = {
@@ -72,12 +72,12 @@ def existElem(l: list, elem: Any) -> bool:
     return False
 
 def common(func):
-    async def wrapper(app: App, e: GroupMessageRecvEvent):
+    def wrapper(app: App, e: GroupMessageRecvEvent):
         groupId = e.group.id
         if not existElem(settings['enabled_groups'], groupId):
             return
 
-        if not await func(app, e):
+        if not func(app, e):
             app.sendGroupMessage(groupId, Message.phrase(
                 RefMsg(target=e.sender.id),
                 ("使用方法： .(google | baidu | github | bilibili) search_string")
@@ -87,7 +87,7 @@ def common(func):
 
 @Loader.command("google", CommandType.Group)
 @common
-async def google_search(app: App, e: GroupMessageRecvEvent):
+def google_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
     
@@ -99,7 +99,7 @@ async def google_search(app: App, e: GroupMessageRecvEvent):
     
 @Loader.command("baidu", CommandType.Group)
 @common
-async def baidu_search(app: App, e: GroupMessageRecvEvent):
+def baidu_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
     
@@ -111,7 +111,7 @@ async def baidu_search(app: App, e: GroupMessageRecvEvent):
     
 @Loader.command("github", CommandType.Group)
 @common
-async def github_search(app: App, e: GroupMessageRecvEvent):
+def github_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
     
@@ -123,7 +123,7 @@ async def github_search(app: App, e: GroupMessageRecvEvent):
     
 @Loader.command("bilibili", CommandType.Group)
 @common
-async def bilibili_search(app: App, e: GroupMessageRecvEvent):
+def bilibili_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
     

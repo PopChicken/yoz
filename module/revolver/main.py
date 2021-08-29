@@ -51,7 +51,7 @@ def cooldown_thread():
 
 
 @Loader.listen('Load')
-async def onLoad(app: App):
+def onLoad(app: App):
     global settings
 
     settings_tmp = settings.copy()
@@ -96,7 +96,7 @@ def existElem(l: list, elem: Any) -> bool:
 
 
 @Loader.command('转轮手枪', CommandType.Group)
-async def onCommand(app: App, e: GroupMessageRecvEvent):
+def onCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     argument = str(e.msg).strip()
 
@@ -129,7 +129,7 @@ async def onCommand(app: App, e: GroupMessageRecvEvent):
 
 
 @Loader.command('扣扳机', CommandType.Group)
-async def onCommand(app: App, e: GroupMessageRecvEvent):
+def onCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
 
     if e.group.permission == PermissionType.Member:

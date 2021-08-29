@@ -127,7 +127,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
 
 
 @Loader.listen('Load')
-async def onLoad(app: App):
+def onLoad(app: App):
     global settings
 
     settings_tmp = settings.copy()
@@ -142,11 +142,11 @@ async def onLoad(app: App):
         try:
             settings_tmp = config.update(settings, newSettings)
         except Exception as e:
-            print('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
+            App.logger.warning('配置文件损坏，重置为默认配置，旧文件备份为 conf.yml.bkp')
             try:
                 config.backup('conf.yml')
             except Exception as e:
-                print('备份失败，使用默认配置，取消覆写 conf.yml')
+                App.logger.warning('备份失败，使用默认配置，取消覆写 conf.yml')
 
     conf.seek(0)
     conf.truncate()
@@ -162,8 +162,8 @@ async def onLoad(app: App):
     try:
         init(config)
     except Exception as e:
-        print('加载树木信息时出现致命错误: ', e)
-        print('模块将无法正常运行，请立即终止进程')
+        App.logger.error('加载树木信息时出现致命错误: ' + str(e))
+        App.logger.error('模块将无法正常运行，请立即终止进程')
         return
 
     if userdb.exists():
@@ -189,7 +189,7 @@ async def onLoad(app: App):
     # 启动数据库自动保存循环
     _thread.start_new_thread(dbCommit, ())
 
-    print('Forest加载成功')
+    App.logger.info('Forest加载成功')
 
 
 def existElem(l: list, elem: Any) -> bool:
@@ -200,7 +200,7 @@ def existElem(l: list, elem: Any) -> bool:
 
 
 @Loader.command("种树", CommandType.Group)
-async def plantCommand(app: App, e: GroupMessageRecvEvent):
+def plantCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     memberId = e.sender.id
     message = str(e.msg).strip()
@@ -281,7 +281,7 @@ async def plantCommand(app: App, e: GroupMessageRecvEvent):
 
 
 @Loader.command("逛树林", CommandType.Group)
-async def groupViewTrees(app: App, e: GroupMessageRecvEvent):
+def groupViewTrees(app: App, e: GroupMessageRecvEvent):
     name = '你'
     msg = e.msg
     msg.chain()
@@ -311,7 +311,7 @@ async def groupViewTrees(app: App, e: GroupMessageRecvEvent):
 
 
 @Loader.command("逛树林", CommandType.Contact)
-async def contactViewTrees(app: App, e: ContactMessageRecvEvent):
+def contactViewTrees(app: App, e: ContactMessageRecvEvent):
     record = userdb(userid=e.sender.id)
     empty = True
     
@@ -334,16 +334,16 @@ async def contactViewTrees(app: App, e: ContactMessageRecvEvent):
 
 
 @Loader.command("加速卡", CommandType.Group)
-async def useCard(app: App, e: ContactMessageRecvEvent):
+def useCard(app: App, e: ContactMessageRecvEvent):
     arg = str(e.msg).strip()
     if len(arg) == 0:
         return
     # m = re.match(r'', arg)
 
 @Loader.command("放弃种树", CommandType.Contact)
-async def unplantCommand(app: App, e: ContactMessageRecvEvent):
+def unplantCommand(app: App, e: ContactMessageRecvEvent):
 
-    async def sessionHandler(app: App, e: ContactMessageRecvEvent):
+    def sessionHandler(app: App, e: ContactMessageRecvEvent):
         sender = e.sender
         contactId = e.sender.id
         message = str(e.msg).strip()
