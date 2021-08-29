@@ -14,15 +14,18 @@ __PERMISSION_MAP = {
 
 def unifyEventDict(event_dict: dict) -> dict:
     event_dict = deepcopy(event_dict)
-    if 'sender' in event_dict:
-        sender = event_dict['sender']
+    operator = 'operator'
+    if operator not in event_dict:
+        operator = 'sender'
+    if operator in event_dict:
+        sender = event_dict[operator]
         if 'permission' in sender:
-            event_dict['sender']['permission'] = \
+            event_dict[operator]['permission'] = \
                 __PERMISSION_MAP[sender['permission'].upper()]
         if 'group' in sender:
             group = sender['group']
             if 'permission' in group:
-                event_dict['sender']['group']['permission'] = \
+                event_dict[operator]['group']['permission'] = \
                     __PERMISSION_MAP[group['permission'].upper()]
     return event_dict
 

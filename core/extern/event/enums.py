@@ -4,3 +4,4 @@ from enum import Enum, unique
 class EventType(Enum):
     GroupMessageEvent = 'GroupMessageEvent'
     ContactMessageEvent = 'ContactMessageEvent'
+    GroupRecallEvent = 'GroupRecallEvent'
