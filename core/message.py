@@ -2,7 +2,7 @@ import re
 import hashlib
 import copy
 
-from typing import List, overload
+from typing import List
 
 from core.extern.message.enums import MessageType
 from core.extern.message.enums import *
@@ -11,7 +11,7 @@ from core.extern.message.enums import *
 class BaseMsg:
 
     def __init__(self, type: MessageType) -> None:
-        self.type: MessageType
+        self.type: MessageType = None
 
         self.type = type
     
@@ -25,7 +25,7 @@ class BaseMsg:
 class TextMsg(BaseMsg):
 
     def __init__(self, data: dict = None, text: str = None) -> None:
-        self.text: str
+        self.text: str = None
 
         super().__init__(MessageType.TextMessage)
         if data is not None and text is None:
@@ -49,8 +49,8 @@ class RefMsg(BaseMsg):
     #target: Member
 
     def __init__(self, data: dict = None, target: int = None) -> None:
-        self.target: int
-        self.display: str
+        self.target: int = None
+        self.display: str = None
 
         super().__init__(MessageType.AtMessage)
         if data is not None and target is None:
@@ -74,9 +74,9 @@ class RefMsg(BaseMsg):
 class ImgMsg(BaseMsg):
     
     def __init__(self, data: dict) -> None:
-        self.imageId: str
-        self.online: bool
-        self.url: str
+        self.imageId: str = None
+        self.online: bool = None
+        self.url: str = None
 
         super().__init__(MessageType.ImageMessage)
 
@@ -112,10 +112,12 @@ class Message:
 
     def __init__(self, chain: List[dict] = None, raw: str = None) -> None:
         self.msgChain: List[BaseMsg] = []
-        self.uid: int
+        self.uid: int = None
+        self.time: int = None
 
         if chain is not None and raw is None:
             self.uid = chain[0]['id']
+            self.time = chain[0]['time']
             for msgDict in chain:
                 try:
                     type = msgDict['type']
@@ -136,6 +138,29 @@ class Message:
             msgStr += str(msg)
         return msgStr
 
+    def __getitem__(self, val):
+        if isinstance(val, int):
+            return copy.deepcopy(self.msgChain[val])
+        elif isinstance(val, slice):
+            start = val.start
+            stop = val.stop
+            step = val.step
+            msg = copy.deepcopy(self)
+            msg.msgChain = msg.msgChain[start:stop:step]
+            return msg
+
+    def trim(self) -> "Message":
+        msg = copy.deepcopy(self)
+        if msg.msgChain[0].type == MessageType.TextMessage:
+            if len(str(msg.msgChain[0]).strip()) == 0:
+                del msg.msgChain[0]
+        last = len(msg.msgChain) - 1
+        if msg.msgChain[last].type == MessageType.TextMessage:
+            if len(str(msg.msgChain[last]).strip()) == 0:
+                del msg.msgChain[last]
+        return msg
+
+
     def md5(self) -> str:
         hl = hashlib.md5()
         hl.update(str(self).encode(encoding='utf-8'))
@@ -149,7 +174,15 @@ class Message:
             msgDict.update(msg.dict())
             chain.append(msgDict)
         return chain
+
+    def join(self, msg: "Message") -> "Message":
+        _msg = copy.deepcopy(self)
+        _msg.msgChain += msg.msgChain
+        return _msg
     
+    def append(self, msg: "Message") -> None:
+        self.msgChain += msg.msgChain
+
     def phraseAppend(self, raw: str) -> None:
         typeMatch = '|'.join(list(Message.__CONVERTOR.keys()))
         components = re.split(rf'(\[YOZ:({typeMatch}).*\])', raw)
@@ -181,7 +214,7 @@ class Message:
         return codes
 
     @classmethod
-    def phrase(cls, *obj):
+    def phrase(cls, *obj) -> "Message":
         msg = cls()
         for partMsg in obj:
             if isinstance(partMsg, BaseMsg):
