@@ -2,29 +2,30 @@ from core.entity.contact import Contact
 from core.entity.group import Group, Member
 from core.extern.event.enums import EventType
 from core.message import Message
-from pydantic import BaseModel
 
 
 class BaseEvent:
 
     def __init__(self, type: EventType) -> None:
-        self.type: EventType
-
-        self.type = type
+        self.type: EventType = type
+        self.time: int = None
 
 
 class GroupMessageRecvEvent(BaseEvent):
 
     def __init__(self, data: dict) -> None:
-        self.msg: Message
-        self.sender: Member
-        self.group: Group
+        self.msg: Message = None
+        self.sender: Member = None
+        self.group: Group = None
 
         super().__init__(EventType.GroupMessageEvent)
         senderInfo = data['sender']
         id = senderInfo['id']
         memberName = senderInfo['memberName']
         permission = senderInfo['permission']
+        joinTimestamp = senderInfo['joinTimestamp']
+        lastSpeakTimestamp = senderInfo['lastSpeakTimestamp']
+        muteTimeRemaining = senderInfo['muteTimeRemaining']
 
         groupInfo = senderInfo['group']
         groupId = groupInfo['id']
@@ -35,7 +36,10 @@ class GroupMessageRecvEvent(BaseEvent):
         self.sender = Member(
             id=id,
             memberName=memberName,
-            permission=permission
+            permission=permission,
+            joinTimestamp=joinTimestamp,
+            lastSpeakTimestamp=lastSpeakTimestamp,
+            muteTimeRemaining=muteTimeRemaining
         )
         self.group = Group(
             id=groupId,
@@ -47,11 +51,11 @@ class GroupMessageRecvEvent(BaseEvent):
 class ContactMessageRecvEvent(BaseEvent):
 
     def __init__(self, data: dict) -> None:
-        self.sender: Contact
-        self.msg: Message
+        self.sender: Contact = None
+        self.msg: Message = None
 
         super().__init__(EventType.ContactMessageEvent)
-        self.msg = Message(chain=data['messageChain'])
+        
         senderInfo = data['sender']
         id = senderInfo['id']
         nickname = senderInfo['nickname']
@@ -59,11 +63,48 @@ class ContactMessageRecvEvent(BaseEvent):
         fromGroup = None
         if 'group' in senderInfo:
             fromGroup = senderInfo['group']['id']
+
         self.msg = Message(chain=data['messageChain'])
         self.sender = Contact(
             id=id,
             nickname=nickname,
             remark=remark,
             fromGroup=fromGroup
+        )
+
+
+class GroupRecallEvent(BaseEvent):
+    def __init__(self, data: dict) -> None:
+        self.msgId: Message = None
+        self.operator: Member = None
+
+        super().__init__(EventType.GroupRecallEvent)
+        operatorInfo = data['operator']
+        id = operatorInfo['id']
+        memberName = operatorInfo['memberName']
+        permission = operatorInfo['permission']
+        joinTimestamp = operatorInfo['joinTimestamp']
+        lastSpeakTimestamp = operatorInfo['lastSpeakTimestamp']
+        muteTimeRemaining = operatorInfo['muteTimeRemaining']
+
+        groupInfo = operatorInfo['group']
+        groupId = groupInfo['id']
+        groupName = groupInfo['name']
+        groupPermission = groupInfo['permission']
+
+        self.msgId = data['messageId']
+        self.time = data['time']
+        self.operator = Member(
+            id=id,
+            memberName=memberName,
+            permission=permission,
+            joinTimestamp=joinTimestamp,
+            lastSpeakTimestamp=lastSpeakTimestamp,
+            muteTimeRemaining=muteTimeRemaining
+        )
+        self.group = Group(
+            id=groupId,
+            groupName=groupName,
+            permission=groupPermission
         )
 
