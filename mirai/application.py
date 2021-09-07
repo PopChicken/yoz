@@ -25,10 +25,6 @@ from core.entity.group import Group, Member
 from core.entity.contact import Contact
 
 
-import os
-os.environ["http_proxy"] = "http://127.0.0.1:8888"
-os.environ["https_proxy"] = "http://127.0.0.1:8888"
-
 class Mirai(App):
 
     def __init__(self) -> None:
@@ -87,26 +83,30 @@ class Mirai(App):
                 if len(recs) != 0:
                     del self.memberRedirectors[recs[0]['__id__']]
 
+
     async def __message_event_socket(self):
-        try:
+        async def connect(app: Mirai):
             App.logger.info("connecting mirai-http service...")
-            receiver = await websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}')
-            response = await receiver.recv()
-            response = json.loads(response)
-            self.sessionKey = response['data']['session']
-            self.__init_modules()
-        except Exception as e:
-            App.logger.error('websocket connection error\n' + ''.join(traceback.format_exception(*sys.exc_info())))
-            App.logger.error('exiting...')
-            exit(0)
+            while True:
+                try:
+                    receiver = await websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}')
+                    response = await receiver.recv()
+                    response = json.loads(response)
+                    app.sessionKey = response['data']['session']
+                    break
+                except:
+                    time.sleep(10.0)
+            return receiver
+        receiver = await connect(self)
+        self.__init_modules()
         App.logger.info("event loop started")
         while True:
             try:
                 response = await receiver.recv()
                 response = json.loads(response)['data']
             except Exception as e:
-                print('websocket communication error, retrying:', e)
-                time.sleep(1.0)
+                print("websocket communication error, retrying:", e)
+                connect(self)
                 continue
 
             # 初始化 data
@@ -223,7 +223,7 @@ class Mirai(App):
 
         # init modules
         App.logger.info("starting yozbot console...")
-        asyncio.get_event_loop().run_until_complete(self.__message_event_socket())
+        asyncio.run(self.__message_event_socket())
 
     def setCommandHead(self, head: str) -> None:
         self.commandHead = head
@@ -378,6 +378,17 @@ class Mirai(App):
                 "urls": urls
             }
         requests.post(f'{s.HTTP_URL}/sendImageMessage', json=fMsg)
+
+    def getMemberInfo(self, group: int, target: int) -> Member:
+        fMsg = {
+            "sessionKey": self.sessionKey,
+            "target": group,
+            "memberId": target
+        }
+        resp = requests.get(f'{s.HTTP_URL}/memberInfo?sessionKey={self.sessionKey}&target={group}&memberId={target}').json()
+        member = Member(target, resp['memberName'], unify.unifyPermission(resp['permission']),
+                        resp['joinTimestamp'], resp['lastSpeakTimestamp'], resp['muteTimeRemaining'])
+        return member
 
     def getContactList(self) -> List[Contact]:
         pass

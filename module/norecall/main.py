@@ -106,13 +106,13 @@ def onGroupRecallEvent(app: App, e: GroupRecallEvent):
         return
 
     if msgId not in msgDB:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.operator.id),
             (" 好可惜呀！没记住说了啥~嘻嘻")
         ))
         return
     
-    reply = Message.phrase(
+    reply = Message.parse(
         RefMsg(target=e.operator.id)
         ,(": ")
     )

@@ -78,7 +78,7 @@ def common(func):
             return
 
         if not func(app, e):
-            app.sendGroupMessage(groupId, Message.phrase(
+            app.sendGroupMessage(groupId, Message.parse(
                 RefMsg(target=e.sender.id),
                 ("使用方法： .(google | baidu | github | bilibili) search_string")
             ))

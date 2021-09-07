@@ -72,7 +72,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     if e.group.permission == PermissionType.Member:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 需要管理员权限才能执行该指令嗷~"
         ))
@@ -80,14 +80,14 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
 
     if (masterId == 0 and e.sender.permission == PermissionType.Member) \
         or (masterId != 0 and masterId != e.sender.id):
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 你没有权限哟~"
         ))
         return
     
     if len(e.msg.msgChain) == 0:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 格式是\"赐名 @成员 头衔\"哦~"
         ))
@@ -95,14 +95,14 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
 
     atCodes = e.msg.getAtCodes()
     if (len(atCodes) != 1):
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 格式不对喔~"
         ))
         return
 
     app.setSpecialTitle(groupId, atCodes[0].target, str(e.msg.msgChain[2]).strip())
-    app.sendGroupMessage(groupId, Message.phrase(
+    app.sendGroupMessage(groupId, Message.parse(
         RefMsg(target=e.sender.id),
         " 操作成功~"
     ))

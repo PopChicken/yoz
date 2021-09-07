@@ -1,11 +1,12 @@
 import re
+from util.crontab import Crontab
 import yaml
 import time
+import random
 
 from threading import Lock
 from core.extern.message.enums import MessageType
 
-from pydantic.dataclasses import dataclass
 from bisect import bisect_left
 from typing import Any, Dict, List, Tuple
 from queue import Queue
@@ -45,17 +46,32 @@ class SoloCommandType(Enum):
 
 
 class Challenge:
-    def __init__(self, target: int, enhanced: bool, ratio: int) -> None:
+    def __init__(self, app: App, group: int, initiator: int, target: int,
+                 enhanced: bool, ratio: int) -> None:
+        self.app: App = app
+        self.group: int = group
         self.enhanced: bool = enhanced
+        self.initiator: int = initiator
         self.target: int = target
         self.ratio: int = ratio
         self.timestamp: int = time.time()
+    
+    def getValidTimeStr(self) -> str:
+        validSec = round(settings['valid_span'] - time.time() + self.timestamp)
+        if validSec >= 60:
+            return f"{int(validSec / 60)}分{validSec % 60}秒"
+        return f"{int(validSec)}秒"
+    
+    def getValidTimeSec(self) -> int:
+        return round(settings['valid_span'] - time.time() + self.timestamp)
 
 
 lockDB: Dict[int, Dict[int, Lock]] = {}
 statusDB: Dict[int, set[SoloStatus]] = {}
 requestsDB: Dict[int, Dict[int, Dict[int, Challenge]]] = {}
 challengerDB: Dict[int, Dict[int, Challenge]] = {}
+
+crontab = Crontab()
 
 
 class Command:
@@ -64,7 +80,6 @@ class Command:
         self.arg: str
 
 
-@dataclass
 class Database:
     groupId: int
     commandQueue: "Queue[Command]" = Queue()
@@ -86,7 +101,10 @@ def getStatus(group: int, id: int) -> SoloStatus:
 
 def setStatus(group: int, id: int, status: SoloStatus) -> None:
     global statusDB
-    statusDB[group][id] = status
+    if status.Idle and id in statusDB[group]:
+        statusDB[group].remove(id)
+    else:
+        statusDB[group].add(id)
 
 
 def getLock(group: int, id: int) -> Lock:
@@ -101,31 +119,99 @@ def getLock(group: int, id: int) -> Lock:
     return lock
 
 
-def getChallenge(group: int, sender: int, acceptor: int) -> Challenge | None:
+def handleTimeout(challenge: Challenge) -> None:
+    with (getLock(challenge.group, challenge.initiator), getLock(challenge.group, challenge.target)):
+        transit(challenge.app, challenge.group, challenge.initiator, SoloCommandType.Timeout)
+
+
+def getChallengeFrom(group: int, sender: int) -> Challenge | None:
+    global challengerDB
+    groupChallenges = challengerDB[group]
+    senderChallenge = groupChallenges.get(sender)
+    return senderChallenge
+
+
+def getChallengesOn(group: int, target: int) -> Dict[int, Challenge] | None:
+    global requestsDB
     groupRequests = requestsDB[group]
-    acceptorRequests = groupRequests.get(acceptor)
-    if acceptorRequests is None:
-        groupRequests[acceptor] = {}
-        return None
-    return groupRequests[acceptor].get(sender)
+    targetChallenges = groupRequests.get(target)
+    return targetChallenges
 
 
-def cancelChallenge(group: int, sender: int, acceptor: int) -> None:
+def removeChallengeFrom(group: int, sender: int) -> None:
+    ch = getChallengeFrom(group, sender)
+    if ch is None:
+        return
     try:
-        del requestsDB[group][acceptor][sender]
+        del requestsDB[group][ch.target][sender]
+    finally:
+        pass
+    try:
         del challengerDB[group][sender]
     finally:
         pass
 
-def initiateChallenge(group: int, sender: int, acceptor: int,
+
+def initiateChallenge(app: App, group: int, sender: int, acceptor: int,
                       enhanced: bool = False, ratio: int = 1) -> None:
-    challenge = Challenge(acceptor, enhanced, ratio)
+    challenge = Challenge(app, group, sender, acceptor, enhanced, ratio)
+    requestsDB[group].setdefault(acceptor, {})
     requestsDB[group][acceptor][sender] = challenge
     challengerDB[group][sender] = challenge
 
+    crontab.add(f'{str(group)}-{str(sender)}', settings['valid_span'], handleTimeout, (challenge, ))
 
-def versus(group: int, attacker: int, defender: int):
-    pass
+
+def versus(app: App, group: int, challenge: Challenge, attacker: int, defender: int):
+    roundMsg = Message()
+    if challenge.enhanced:
+        roundMsg.parseAppend(
+            f"{RefMsg(target=attacker)} 与{RefMsg(target=defender)} 赌上尊严的对决开始了！\n"
+        )
+    else:
+        roundMsg.parseAppend(
+            f"{RefMsg(target=attacker)} 与{RefMsg(target=defender)} 的对决开始了！\n"
+        )
+    attack = random.randint(1, 6)
+    defend = random.randint(1, 6)
+    draw = False
+    winner = None
+    loser = None
+    roundMsg.parseAppend(
+        f"挑战者{RefMsg(target=attacker)} 掷出了{attack}点！\n" +
+        f"应战者{RefMsg(target=defender)} 掷出了{defend}点！\n"
+    )
+    if attack > defend:
+        winner = attacker
+        loser = defender
+        roundMsg.parseAppend(
+            f"挑战者{RefMsg(target=attacker)} 击败了应战者{RefMsg(target=defender)}\n"
+        )
+    elif attack == defend:
+        draw = True
+        roundMsg.parseAppend(
+            f"挑战者{RefMsg(target=attacker)} 与应战者{RefMsg(target=defender)} 和局~\n"
+        )
+    else:
+        winner = defender
+        loser = attacker
+        roundMsg.parseAppend(
+            f"应战者{RefMsg(target=defender)} 击败了挑战者{RefMsg(target=attacker)}\n"
+        )
+    
+    if challenge.enhanced:
+        if draw:
+            roundMsg.parseAppend(
+                f"和局~没有人会被惩罚w\n"
+            )
+        else:
+            roundMsg.parseAppend(
+                f"{RefMsg(target=loser)} 在大拼点中被击败了！接受处罚吧！\n"
+            )
+            app.mute(group, loser, int(challenge.ratio * abs(attack - defend) * 60))
+    
+    removeChallengeFrom(group, attacker)
+    app.sendGroupMessage(group, roundMsg)
 
 
 def transit(app: App, group: int, initiator: int, type: SoloCommandType,
@@ -133,52 +219,104 @@ def transit(app: App, group: int, initiator: int, type: SoloCommandType,
     initiatorStatus: SoloStatus = getStatus(group, initiator)
     targetStatus: SoloStatus = getStatus(group, target)
     if initiator == target:
-        app.sendGroupMessage(group, Message.phrase(
+        app.sendGroupMessage(group, Message.parse(
             RefMsg(target=initiator),
-            "不可以自雷的哦~"
+            " 不可以自雷的哦~"
         ))
         return
 
     match initiatorStatus:
         case SoloStatus.Idle:
             match type:
-                case SoloCommandType.Solo, SoloCommandType.SoloEnhanced:
+                case SoloCommandType.Solo | SoloCommandType.SoloEnhanced:
                     enhanced = False
                     if type == SoloCommandType.SoloEnhanced:
                         enhanced = True
                     if targetStatus == SoloStatus.Waiting:
-                        challenge = getChallenge(group, initiator, target)
-                        if challenge is not None:
-                            # 应战
+                        challenge: Challenge = getChallengeFrom(group, target)
+                        if challenge is not None and challenge.target == initiator:
+                            if challenge.enhanced != enhanced:
+                                app.sendGroupMessage(group, Message.parse(
+                                    RefMsg(target=initiator),
+                                    " 要使用相同类型的指令进行应战喔~"
+                                ))
+                                return
+                            versus(app, group, challenge, target, initiator)
                             setStatus(group, target, SoloStatus.Idle)
                             return
-                    initiateChallenge(group, initiator, target, enhanced, ratio)
-                    app.sendGroupMessage(group, Message.phrase(
+                    initiateChallenge(app, group, initiator, target, enhanced, ratio)
+                    setStatus(group, initiator, SoloStatus.Waiting)
+                    app.sendGroupMessage(group, Message.parse(
                         RefMsg(target=initiator),
                         " 成功向",
                         RefMsg(target=target),
                         " 发起挑战~"
                     ))
                 case SoloCommandType.Abandon:
-                    app.sendGroupMessage(group, Message.phrase(
+                    app.sendGroupMessage(group, Message.parse(
                         RefMsg(target=initiator),
                         " 你还没有发起挑战~"
                     ))
+                case SoloCommandType.Refuse:
+                    challenge = getChallengeFrom(group, target)
+                    if challenge is None:
+                        app.sendGroupMessage(group, Message.parse(
+                            RefMsg(target=initiator),
+                            " 对方并没有挑战你哦~"
+                        ))
+                    else:
+                        removeChallengeFrom(group, target)
+                        setStatus(group, target, SoloStatus.Idle)
+                        app.sendGroupMessage(group, Message.parse(
+                            RefMsg(target=initiator),
+                            " 你拒绝了对方的挑战！"
+                        ))
         case SoloStatus.Waiting:
             match type:
-                case SoloCommandType.Solo, SoloCommandType.SoloEnhanced:
-                    app.sendGroupMessage(group, Message.phrase(
+                case SoloCommandType.Solo | SoloCommandType.SoloEnhanced:
+                    enhanced = False
+                    if type == SoloCommandType.SoloEnhanced:
+                        enhanced = True
+                    if targetStatus == SoloStatus.Waiting:
+                        challenge: Challenge = getChallengeFrom(group, target)
+                        if challenge is not None and challenge.target == initiator:
+                            if challenge.enhanced != enhanced:
+                                app.sendGroupMessage(group, Message.parse(
+                                    RefMsg(target=initiator),
+                                    " 要使用相同类型的指令进行应战喔~"
+                                ))
+                                return
+                            versus(app, group, challenge, target, initiator)
+                            setStatus(group, target, SoloStatus.Idle)
+                            return
+                    app.sendGroupMessage(group, Message.parse(
                         RefMsg(target=initiator),
-                        "你已经发起了一个挑战~"
+                        " 你已经发起了一个挑战~"
                     ))
                 case SoloCommandType.Abandon:
+                    removeChallengeFrom(group, initiator)
                     setStatus(group, initiator, SoloStatus.Idle)
-                    app.sendGroupMessage(group, Message.phrase(
+                    app.sendGroupMessage(group, Message.parse(
                         RefMsg(target=initiator),
-                        "成功放弃挑战~"
+                        " 成功放弃挑战~"
                     ))
+                case SoloCommandType.Refuse:
+                    challenge = getChallengeFrom(group, target)
+                    if challenge is None:
+                        app.sendGroupMessage(group, Message.parse(
+                            RefMsg(target=initiator),
+                            " 对方并没有挑战你哦~"
+                        ))
+                    else:
+                        removeChallengeFrom(group, target)
+                        setStatus(group, target, SoloStatus.Idle)
+                        app.sendGroupMessage(group, Message.parse(
+                            RefMsg(target=initiator),
+                            " 你拒绝了对方的挑战！"
+                        ))
                 case SoloCommandType.Timeout:   # 系统发起，无需校验
-                    pass
+                    if getChallengeFrom(group, initiator) is not None:
+                        removeChallengeFrom(group, initiator)
 
 
 @Loader.listen('Load')
@@ -216,19 +354,22 @@ def onLoad(app: App):
     conf.close()
 
     for group in settings['enabled_groups']:
-        statusDB[int(group)] = {}
+        statusDB[int(group)] = set()
+        challengerDB[int(group)] = {}
+        requestsDB[int(group)] = {}
+        lockDB[int(group)] = {}
 
     App.logger.info('Solo加载成功')
 
 
 def handleSolo(app: App, e: GroupMessageRecvEvent, enhanced: bool = False):
-    msg = e.msg.trim()
+    msg = e.msg.strip()
     arguments = str(msg).strip()
     senderId = e.sender.id
     groupId = e.group.id
 
     if len(arguments) == 0:
-        app.sendGroupMessage(e.group, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             ("欢迎来玩拼点~\n"
              "“拼点@对方”可以下达战书或者应战\n"
@@ -245,40 +386,51 @@ def handleSolo(app: App, e: GroupMessageRecvEvent, enhanced: bool = False):
 
     if enhanced:
         pattern = r'^((\d+)倍|)\s*'
-        ref = None
         if msg[0].type == MessageType.TextMessage:
             match = re.match(pattern, str(msg[0]))
             if match is None or len(msg.msgChain) < 2:
-                app.sendGroupMessage(e.group, Message.phrase(
+                app.sendGroupMessage(groupId, Message.parse(
                     RefMsg(target=e.sender.id),
-                    "格式不对喔~"
+                    " 格式不对喔~"
                 ))
                 return
             ratioStr = match.group(2)
             if ratioStr is not None:
                 ratio = int(ratioStr)
             msg = msg[1:]
-        if msg[0] != MessageType.AtMessage:
-            app.sendGroupMessage(e.group, Message.phrase(
+        if msg[0].type != MessageType.AtMessage:
+            app.sendGroupMessage(groupId, Message.parse(
                 RefMsg(target=e.sender.id),
-                "格式不对喔~"
+                " 格式不对喔~"
             ))
             return
     else:
         if msg[0].type != MessageType.AtMessage:
-            app.sendGroupMessage(e.group, Message.phrase(
+            app.sendGroupMessage(groupId, Message.parse(
                 RefMsg(target=e.sender.id),
-                "格式不对喔~"
+                " 格式不对喔~"
             ))
             return
+
+    if not 1 <= ratio <= settings['max_stack']:
+        app.sendGroupMessage(groupId, Message.parse(
+            RefMsg(target=e.sender.id),
+            f" 倍率只可以是2到{settings['max_stack']}范围内的整数哦~"
+        ))
+        return
 
     targetId = msg[0].target
 
     type = SoloCommandType.Solo
     if enhanced:
         type = SoloCommandType.SoloEnhanced
-    with (getLock(groupId, senderId), getLock(groupId, targetId)):
-        transit(app, groupId, senderId, type, targetId, ratio)
+    
+    if targetId == senderId:
+        with getLock(groupId, senderId):
+            transit(app, groupId, senderId, type, targetId, ratio)
+    else:
+        with (getLock(groupId, senderId), getLock(groupId, targetId)):
+            transit(app, groupId, senderId, type, targetId, ratio)
 
 
 @Loader.command('拼点', CommandType.Group)
@@ -296,11 +448,21 @@ def Solo(app: App, e: GroupMessageRecvEvent):
     arguments = str(e.msg).strip()
 
     if len(arguments) == 0:
-        app.sendGroupMessage(e.group, Message.phrase(
+        app.sendGroupMessage(e.group.id, Message.parse(
             RefMsg(target=e.sender.id),
-            "你没有at你的对手喔~"
+            " 你没有at你的拒绝对象喔~"
         ))
-    pass
+    
+    msg = e.msg.strip()
+    if len(msg.msgChain) == 0 or msg[0].type != MessageType.AtMessage:
+        app.sendGroupMessage(e.group.id, Message.parse(
+            RefMsg(target=e.sender.id),
+            " 格式不对喔~"
+        ))
+    target = msg[0].target
+
+    with (getLock(e.group.id, e.sender.id), getLock(e.group.id, target)):
+        transit(app, e.group.id, e.sender.id, SoloCommandType.Refuse, target)
 
 
 @Loader.command('弃拼', CommandType.Group)
@@ -311,20 +473,46 @@ def Solo(app: App, e: GroupMessageRecvEvent):
 
     senderStatus: SoloStatus = getStatus(groupId, senderId)
     if senderStatus == SoloStatus.Idle:
-        app.sendGroupMessage(e.group, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
-            "你还没有向别人发起挑战喔~"
+            " 你还没有向别人发起挑战喔~"
         ))
         return
+
+    if len(arguments) > 0:
+        app.sendGroupMessage(groupId, Message.parse(
+            RefMsg(target=e.sender.id),
+            " 格式不对喔~"
+        ))
+    with getLock(groupId, senderId):
+        transit(app, groupId, senderId, SoloCommandType.Abandon)
 
 
 @Loader.command('查战书', CommandType.Group)
 def Solo(app: App, e: GroupMessageRecvEvent):
     arguments = str(e.msg).strip()
 
-    if len(arguments) == 0:
-        app.sendGroupMessage(e.group, Message.phrase(
+    if len(arguments) > 0:
+        app.sendGroupMessage(e.group.id, Message.parse(
             RefMsg(target=e.sender.id),
-            (""
-             "")
+            " 格式不对喔~"
         ))
+    
+    with getLock(e.group.id, e.sender.id):
+        requests = getChallengesOn(e.group.id, e.sender.id)
+        if requests is None or len(requests) == 0:
+            app.sendGroupMessage(e.group.id, Message.parse(
+                RefMsg(target=e.sender.id),
+                " 你还没有收到挑战喔~"
+            ))
+        else:
+            reply = Message(raw="目前你收到的战书有：\n挑战者  类型  有效时间\n")
+            for _, req in requests.items():
+                member = app.getMemberInfo(req.group, req.initiator)
+                type = ""
+                if req.enhanced:
+                    type = "大"
+                reply.parseAppend(
+                    f"{member.inGroupName} {type}拼点 {req.getValidTimeStr()}\n")
+            app.sendGroupMessage(e.group.id, reply)
+

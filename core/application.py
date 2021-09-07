@@ -140,6 +140,11 @@ class App(ABC):
         pass
 
     @abstractmethod
+    def getMemberInfo(self, group: int, target: int) -> Member:
+        """获取群成员信息"""
+        pass
+
+    @abstractmethod
     def kick(self, group: int, target: int, msg: str) -> None:
         """踢出成员，需要权限，注意异常处理（异常还未设计）"""
         pass

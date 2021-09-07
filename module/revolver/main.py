@@ -107,7 +107,7 @@ def onCommand(app: App, e: GroupMessageRecvEvent):
         return
     
     if len(argument) == 0:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             ("欢迎来玩转轮手枪~\n"
             "嘎嘎嘎~这是一个恐怖的游戏！\n"
@@ -117,12 +117,12 @@ def onCommand(app: App, e: GroupMessageRecvEvent):
         ))
     
     if groupInfo[groupId.id].idle:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             "已经重新装填弹药咯！"
         ))
     else:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             "本轮比赛还没有结束哟~"
         ))

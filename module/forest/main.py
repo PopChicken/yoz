@@ -92,7 +92,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
     if type == 'success':
         proc = info['duration'] / settings['max_time'] * 100
         treeId, quality = lottery(proc)
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=memberId),
             "的树长大啦！\n"
             f"{getCongratulations(quality)}"
@@ -115,7 +115,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
             )
         userdb.commit()
     elif type == 'cancel':
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=memberId),
             "取消了种树，树枯萎了..."
         ))
@@ -212,7 +212,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     if len(str(message).strip()) == 0:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=memberId),
             ("欢迎使用种树功能\n"
              "不 要 挑 战 自 制 力！\n"
@@ -233,7 +233,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
 
     m = re.match(r'^(\d+(\.\d+)?)\s*(h|d|min|s)$', message)
     if m is None:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=memberId),
             (f"格式不对哦，使用 {app.commandHead[0]}种树 查看帮助")
         ))
@@ -253,7 +253,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         sec = int(num)
 
     if sec > settings['max_time'] or sec < settings['min_time']:
-        app.sendGroupMessage(groupId, Message.phrase(
+        app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=memberId),
             (f"你输入的是{formatTime(sec)}\n"
              "种树时间不可取喔~\n"
@@ -263,7 +263,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     app.mute(groupId, memberId, sec)
-    app.sendGroupMessage(groupId, Message.phrase(
+    app.sendGroupMessage(groupId, Message.parse(
         RefMsg(target=memberId),
         (f"要专注哦~{app.nickname}为你加油！")
     ))
@@ -301,11 +301,11 @@ def groupViewTrees(app: App, e: GroupMessageRecvEvent):
                 reply += f"  【{getQualityDescription(item['quality'])}】{item['name']}×{cnt}\n"
         reply = reply[:-1]
     if empty:
-        app.sendGroupMessage(e.group.id, Message.phrase(
+        app.sendGroupMessage(e.group.id, Message.parse(
             RefMsg(target=e.sender.id), "哎呀，你的树林空空如也呢，快去种树吧~")
         )
     else:
-        app.sendGroupMessage(e.group.id, Message.phrase(
+        app.sendGroupMessage(e.group.id, Message.parse(
             RefMsg(target=e.sender.id), reply)
         )
 
@@ -405,7 +405,7 @@ def unplantCommand(app: App, e: ContactMessageRecvEvent):
     session.set('optionCnt', optCnt)
     session.next()
     
-    app.replyContactMessage(sender, Message.phrase(
+    app.replyContactMessage(sender, Message.parse(
         ("你有以下几个正在种树的群\n"
          + reply +
          "请输入序号(仅数字)\n"

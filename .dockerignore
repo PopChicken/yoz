@@ -1,0 +1,9 @@
+.vscode/
+.git/
+.VSCodeCounter/
+.gitignore
+**/*.log
+doc/
+config/
+README.md
+**/__pycache__/

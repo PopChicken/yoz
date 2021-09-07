@@ -130,7 +130,7 @@ class Message:
                     print('解析消息链时出现问题:\n\t', e)
 
         elif chain is None and raw is not None:
-            self.phraseAppend(raw)
+            self.parseAppend(raw)
 
     def __str__(self) -> str:
         msgStr = ''
@@ -149,15 +149,18 @@ class Message:
             msg.msgChain = msg.msgChain[start:stop:step]
             return msg
 
-    def trim(self) -> "Message":
+    def strip(self) -> "Message":
         msg = copy.deepcopy(self)
+        if len(msg.msgChain) == 0:
+            return msg
         if msg.msgChain[0].type == MessageType.TextMessage:
             if len(str(msg.msgChain[0]).strip()) == 0:
                 del msg.msgChain[0]
-        last = len(msg.msgChain) - 1
-        if msg.msgChain[last].type == MessageType.TextMessage:
-            if len(str(msg.msgChain[last]).strip()) == 0:
-                del msg.msgChain[last]
+        if len(msg.msgChain) == 0:
+            return msg
+        if msg.msgChain[-1].type == MessageType.TextMessage:
+            if len(str(msg.msgChain[-1]).strip()) == 0:
+                del msg.msgChain[-1]
         return msg
 
 
@@ -183,23 +186,23 @@ class Message:
     def append(self, msg: "Message") -> None:
         self.msgChain += msg.msgChain
 
-    def phraseAppend(self, raw: str) -> None:
+    def parseAppend(self, raw: str) -> None:
         typeMatch = '|'.join(list(Message.__CONVERTOR.keys()))
-        components = re.split(rf'(\[YOZ:({typeMatch}).*\])', raw)
+        components = re.split(rf'(\[YOZ:({typeMatch})((?!\]).)*\])', raw)
 
-        skip = False
+        skip = 0
 
         for component in components:
             if len(component) == 0:
                 continue
-            if skip:
-                skip = False
+            if skip > 0:
+                skip -= 1
                 continue
             m = re.match(rf'\[YOZ:({typeMatch}).*\]', component)
             if m is None:
                 self.msgChain.append(TextMsg(text=component))
             else:
-                skip = True
+                skip = 2
                 typeName = m.group(1)
                 properties = dict(re.findall(
                     r',\s*([^,]+)\s*=\s*([^,\]]+)\s*', component))
@@ -214,11 +217,11 @@ class Message:
         return codes
 
     @classmethod
-    def phrase(cls, *obj) -> "Message":
+    def parse(cls, *obj) -> "Message":
         msg = cls()
         for partMsg in obj:
             if isinstance(partMsg, BaseMsg):
                 msg.msgChain.append(partMsg)
             elif isinstance(partMsg, str):
-                msg.phraseAppend(partMsg)
+                msg.parseAppend(partMsg)
         return msg

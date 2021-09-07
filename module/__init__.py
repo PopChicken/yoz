@@ -1,6 +1,9 @@
 from . import (
-    forest,
+    #forest,
     repeater,
-    revolver,
-    search
+    #revolver,
+    search,
+    title,
+    norecall,
+    solo
 )
