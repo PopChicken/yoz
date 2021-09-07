@@ -5,5 +5,6 @@ from . import (
     search,
     title,
     norecall,
-    solo
+    solo,
+    unmute
 )

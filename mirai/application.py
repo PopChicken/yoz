@@ -397,7 +397,13 @@ class Mirai(App):
         pass
 
     def getMemberList(self, group: int) -> List[Member]:
-        pass
+        resp = requests.get(f'{s.HTTP_URL}/memberList?sessionKey={self.sessionKey}&target={group}').json()
+        members = []
+        for m in resp['data']:
+            member = Member(m['id'], m['memberName'], unify.unifyPermission(m['permission']),
+                        m['joinTimestamp'], m['lastSpeakTimestamp'], m['muteTimeRemaining'])
+            members.append(member)
+        return members
 
     def kick(self, group: int, target: int, msg: str) -> None:
         pass
