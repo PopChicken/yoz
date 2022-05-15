@@ -1,8 +1,11 @@
 config/
-!trees.yml
 *.yml
 *.db
 **/__pycache__/
 .VSCodeCounter/
 .vscode/
 dep/
+*.log
+venv/
+data/
+.idea/
