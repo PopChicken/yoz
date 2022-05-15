@@ -2,6 +2,7 @@ config/
 *.yml
 *.db
 **/__pycache__/
+**/.DS_Store
 .VSCodeCounter/
 .vscode/
 dep/
