@@ -1,4 +1,4 @@
-FROM python:3.10.0rc1-buster
+FROM python:3.10.4-alpine3.14
 COPY . /yoz/
 COPY dep/websockets /yoz/dep/
 WORKDIR /yoz
