@@ -6,6 +6,14 @@ _port = os.environ.get('YOZ_MIRAI_API_PORT')
 
 HOST = 'localhost'
 PORT = 8089
+
+if _host is not None:
+    print("use %s as HOST" % _host)
+    HOST = _host
+if _port is not None:
+    print("use %s as PORT" % _port)
+    PORT = int(_port)
+
 AUTH_KEY = 'zJdAWmCXz92DAW3vT'
 
 BOT_ID = 1516161873
@@ -23,7 +31,3 @@ BLACK_LIST = [
     1252361674
 ]
 
-if _host is not None:
-    HOST = _host
-if _port is not None:
-    PORT = int(_port)
