@@ -1,10 +1,7 @@
-requests==2.24.0
-pydantic==1.8.2
-llist==0.7.1
 coloredlogs==15.0.1
+llist==0.7.1
 PyDbLite==3.0.4
-#websockets==9.1
-PyYAML==5.4.1
-
-websockets~=10.0
-pyparsing~=2.4.7
+pyparsing==3.0.9
+PyYAML==6.0
+requests==2.27.1
+websockets==10.3
