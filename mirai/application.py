@@ -1,5 +1,3 @@
-import sys
-import traceback
 import websockets
 import asyncio
 import json
@@ -8,6 +6,7 @@ import pydblite
 import copy
 import inspect
 import time
+import os
 
 import mirai.settings as s
 import mirai.unify as unify
@@ -24,6 +23,8 @@ from core.message import Message
 from core.entity.group import Group, Member
 from core.entity.contact import Contact
 
+os.environ['no_proxy'] = '*'
+
 
 class Mirai(App):
 
@@ -32,29 +33,29 @@ class Mirai(App):
 
         self.commandHead: str = s.CMD_HEAD
         self.sessionKey: str = ''
-        self.redirectors: Dict[str, (str, Callable)] = {}
-        self.memberRedirectors = pydblite.Base(':memory:')
-        self.contactRedirectors = pydblite.Base(':memory:')
+        self.redirections: Dict[str, (str, Callable)] = {}
+        self.memberRedirections = pydblite.Base(':memory:')
+        self.contactRedirections = pydblite.Base(':memory:')
         self.nickname: str = s.NICKNAME
 
         self.threadManager = t.ThreadManager()
 
-        self.memberRedirectors.create('guid', 'groupId', 'memberId', 'hook')
-        self.contactRedirectors.create('guid', 'contactId', 'hook')
+        self.memberRedirections.create('guid', 'groupId', 'memberId', 'hook')
+        self.contactRedirections.create('guid', 'contactId', 'hook')
 
-        self.memberRedirectors.create_index('guid', 'groupId', 'memberId')
-        self.contactRedirectors.create_index('guid', 'contactId')
+        self.memberRedirections.create_index('guid', 'groupId', 'memberId')
+        self.contactRedirections.create_index('guid', 'contactId')
 
     # 过滤满足filter的消息，并将其完全重定向至hook
     def redirect(self, guid: str, filter: dict,
                  hook: Callable[[App, BaseEvent], None]):
         # 待实现
-        self.redirectors[guid] = (filter, hook)
+        self.redirections[guid] = (filter, hook)
 
     # 过滤满足特定群与QQ号的消息，并将其完全重定向至hook
     def redirectMember(self, guid: str, groupId: int, memberId: int,
                        hook: Callable[[App, GroupMessageRecvEvent], None]):
-        self.memberRedirectors.insert(
+        self.memberRedirections.insert(
             guid=guid,
             groupId=groupId,
             memberId=memberId,
@@ -64,7 +65,7 @@ class Mirai(App):
     # 过滤满足特定QQ号的消息，并将其完全重定向至hook
     def redirectContact(self, guid: str, contactId: int,
                         hook: Callable[[App, ContactMessageRecvEvent], None]):
-        self.contactRedirectors.insert(
+        self.contactRedirections.insert(
             guid=guid,
             contactId=contactId,
             hook=hook
@@ -72,31 +73,38 @@ class Mirai(App):
 
     # 卸载hook
     def unredirect(self, guid: str) -> None:
-        if guid in self.redirectors:
-            del self.redirectors[guid]
+        if guid in self.redirections:
+            del self.redirections[guid]
         else:
-            recs = self.contactRedirectors(guid=guid)
+            recs = self.contactRedirections(guid=guid)
             if len(recs) != 0:
-                del self.contactRedirectors[recs[0]['__id__']]
+                del self.contactRedirections[recs[0]['__id__']]
             else:
-                recs = self.memberRedirectors(guid=guid)
+                recs = self.memberRedirections(guid=guid)
                 if len(recs) != 0:
-                    del self.memberRedirectors[recs[0]['__id__']]
-
+                    del self.memberRedirections[recs[0]['__id__']]
 
     async def __message_event_socket(self):
         async def connect(app: Mirai):
-            App.logger.info("connecting mirai-http service...")
             while True:
+                App.logger.info("connecting mirai-http service...")
                 try:
-                    receiver = await websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}')
-                    response = await receiver.recv()
+                    if s.NEED_VERIFY:
+                        receiver = await asyncio.wait_for(websockets.connect(f'{s.WS_URL}/all?verifyKey={s.AUTH_KEY}&qq={s.BOT_ID}'), 5)
+                    else:
+                        receiver = await asyncio.wait_for(websockets.connect(f'{s.WS_URL}/all?qq={s.BOT_ID}'), 5)
+                    response = await asyncio.wait_for(receiver.recv(), 5)
                     response = json.loads(response)
                     app.sessionKey = response['data']['session']
                     break
+                except TimeoutError:
+                    App.logger.error("websocket connecting attemption timeout, retrying")
                 except:
+                    App.logger.error("websocket connecting attemption failed, retrying")
                     time.sleep(10.0)
+            App.logger.info("mirai-http service connected")
             return receiver
+
         receiver = await connect(self)
         self.__init_modules()
         App.logger.info("event loop started")
@@ -106,7 +114,7 @@ class Mirai(App):
                 response = json.loads(response)['data']
             except Exception as e:
                 print("websocket communication error, retrying:", e)
-                connect(self)
+                receiver = await connect(self)
                 continue
 
             # 初始化 data
@@ -127,24 +135,24 @@ class Mirai(App):
             if eventName == 'GroupMessage':
                 groupId = response['sender']['group']['id']
                 memberId = response['sender']['id']
-                rec = self.memberRedirectors(groupId=groupId, memberId=memberId)
+                rec = self.memberRedirections(groupId=groupId, memberId=memberId)
                 if len(rec) != 0:
                     rec = rec[0]
                     e = GroupMessageRecvEvent(
                         unify.unifyEventDict(response))
                     self.threadManager.execute(rec['hook'], (self, e,))
                     continue
-                
+
             elif eventName == 'FriendMessage':
                 contactId = response['sender']['id']
-                rec = self.contactRedirectors(contactId=contactId)
+                rec = self.contactRedirections(contactId=contactId)
                 if len(rec) != 0:
                     rec = rec[0]
                     e = ContactMessageRecvEvent(
                         unify.unifyEventDict(response))
                     self.threadManager.execute(rec['hook'], (self, e,))
                     continue
-            
+
             # 尝试匹配指令
             if eventName == 'GroupMessage' or eventName == 'FriendMessage':
                 # TODO use Trie tree to optimize command match
@@ -159,7 +167,7 @@ class Mirai(App):
                             for cmdStr in Loader.groupCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
                                     mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch)+1:]
+                            section1['text'] = section1['text'][len(mostMatch) + 1:]
                             e = GroupMessageRecvEvent(
                                 unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
@@ -168,7 +176,7 @@ class Mirai(App):
                             for cmdStr in Loader.contactCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
                                     mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch)+1:]
+                            section1['text'] = section1['text'][len(mostMatch) + 1:]
                             e = ContactMessageRecvEvent(
                                 unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
@@ -183,18 +191,21 @@ class Mirai(App):
             if hasattr(Mirai2CoreEvents, eventName):
                 e = Mirai2CoreEvents[eventName].value(
                     unify.unifyEventDict(response))
-                listeners = Loader.eventsListener.get(eventName)
-
-                if listeners is not None:
-                    for listener in listeners:
-                        self.threadManager.execute(listener, (self, e,))
+                modules = Loader.eventsListener.get(eventName)
+                if modules is not None:
+                    for _, listeners in modules.items():
+                        for listener in listeners:
+                            self.threadManager.execute(listener, (self, e,))
 
     def __init_modules(self) -> None:
+        Loader.loadPlugins('module')
+        
         App.logger.info("initializing plugins...")
-        listeners = Loader.eventsListener.get('Load')
-        if listeners is not None:
-            for listener in listeners:
-                self.threadManager.execute(listener, (self,))
+        modules = Loader.eventsListener.get('Load')
+        if modules is not None:
+            for _, listeners in modules.items():
+                for listener in listeners:
+                    self.threadManager.execute(listener, (self,))
 
     def run(self):
         """
@@ -285,7 +296,7 @@ class Mirai(App):
         requests.post(f'{s.HTTP_URL}/unmuteAll', json=fMsg)
 
     # TODO 临时消息尚无模型，建议tg接口中的临时消息接口直接调用sendContactMessage，mirai接口中分别实现。
-    def sendContactMessage(self, contact: int, message, group: int=None) -> Message:
+    def sendContactMessage(self, contact: int, message, group: int = None) -> Message:
         if not isinstance(message, Message):
             message = Message(raw=message)
         message: Message
@@ -301,8 +312,8 @@ class Mirai(App):
         else:
             temp = False
             for frameInfo in inspect.stack(0):
-                if frameInfo.function == self.__message_event_socket.__name__\
-                and isinstance(frameInfo.frame.f_locals['self'], Mirai):
+                if frameInfo.function == self.__message_event_socket.__name__ \
+                        and isinstance(frameInfo.frame.f_locals['self'], Mirai):
                     data = frameInfo.frame.f_locals['data']
                     if 'originGroupId' in data:
                         groupId = data['originGroupId']
@@ -336,7 +347,7 @@ class Mirai(App):
             resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
-        return message  
+        return message
 
     def recall(self, messageId: int) -> None:
         """撤回消息"""
@@ -347,7 +358,7 @@ class Mirai(App):
         requests.post(f'{s.HTTP_URL}/recall', json=fMsg)
 
     # /sendImageMessage 不返回信息id
-    def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> None:
+    def sendWebImage(self, urls: List[str], contactId: int = None, groupId: int = None) -> None:
         """
         发送URL图片 
         仅传入contantId:    好友消息
@@ -385,7 +396,8 @@ class Mirai(App):
             "target": group,
             "memberId": target
         }
-        resp = requests.get(f'{s.HTTP_URL}/memberInfo?sessionKey={self.sessionKey}&target={group}&memberId={target}').json()
+        resp = requests.get(
+            f'{s.HTTP_URL}/memberInfo?sessionKey={self.sessionKey}&target={group}&memberId={target}').json()
         member = Member(target, resp['memberName'], unify.unifyPermission(resp['permission']),
                         resp['joinTimestamp'], resp['lastSpeakTimestamp'], resp['muteTimeRemaining'])
         return member
@@ -401,7 +413,7 @@ class Mirai(App):
         members = []
         for m in resp['data']:
             member = Member(m['id'], m['memberName'], unify.unifyPermission(m['permission']),
-                        m['joinTimestamp'], m['lastSpeakTimestamp'], m['muteTimeRemaining'])
+                            m['joinTimestamp'], m['lastSpeakTimestamp'], m['muteTimeRemaining'])
             members.append(member)
         return members
 

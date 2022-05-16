@@ -13,7 +13,7 @@ TASK_TIMEOUT = 1
 class InfoClass:
 
     def __init__(self) -> None:
-        self.listener: Callable = Callable()
+        self.listener: Callable
         self.app = Any
         self.e = Any
 
@@ -27,11 +27,8 @@ class TaskExecuteResult(Enum):
 class ThreadManager:
 
     def __init__(self) -> None:
-        self.__workers: Dict[str, Thread] = {}
-        self.__tasks: "Queue[InfoClass]" = Queue()
         self.__results: "Queue[TaskExecuteResult]" = Queue()
         pass
-
 
     def execute(self, func: Callable, args: Iterable):
         def executor(): # 用于执行
@@ -39,16 +36,16 @@ class ThreadManager:
                 def __init__(self) -> None:
                     self.exitcode: int = 0
                     self.exception: Exception = None
-                    self.exc_traceback: str = None
+                    self.exc_traceback: str = ''
 
-            def run(res: ExceptionResult):  # 用于实际执行与捕获异常
+            def run(result: ExceptionResult):  # 用于实际执行与捕获异常
                 try:
                     func(*args)
                 except Exception as ex:
-                    res.exitcode = 1
-                    res.exception = ex
-                    res.exc_traceback = ''.join(traceback.format_exception(*sys.exc_info()))
-                    App.logger.warning("Error occurred in plugin\n" + res.exc_traceback)
+                    result.exitcode = 1
+                    result.exception = ex
+                    result.exc_traceback = ''.join(traceback.format_exception(*sys.exc_info()))
+                    App.logger.warning("Error occurred in plugin\n" + result.exc_traceback)
 
             res = ExceptionResult()
             t = Thread(target=run, args=(res, ))
@@ -66,4 +63,3 @@ class ThreadManager:
                 self.__results.put(TaskExecuteResult.Success)
 
         Thread(target=executor).start()
-

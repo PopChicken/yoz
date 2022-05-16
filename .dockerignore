@@ -4,6 +4,7 @@
 .gitignore
 **/*.log
 doc/
-config/
+#config/
 README.md
 **/__pycache__/
+**/.DS_Store

@@ -82,6 +82,7 @@ class ImgMsg(BaseMsg):
 
         self.online = False
         self.imageId = data['imageId']
+        self.url = data['url']
     
     def __str__(self) -> str:
         return f'[YOZ:Image,imageId={self.imageId}]'

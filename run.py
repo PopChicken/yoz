@@ -1,5 +1,6 @@
 from mirai.application import Mirai
 
+
 appMirai = Mirai()
 appMirai.run()
 

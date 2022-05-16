@@ -1,4 +1,3 @@
-import re
 import yaml
 
 from bisect import bisect_left
@@ -12,13 +11,15 @@ from core.application import App
 from core.event import GroupMessageRecvEvent
 from core.entity.group import PermissionType
 
-
 config = Config('title')
 
 settings = {
     'enabled_groups': [],
     'master': 0,
 }
+
+# print('loaded!')
+
 
 @Loader.listen('Load')
 def onLoad(app: App):
@@ -50,7 +51,7 @@ def onLoad(app: App):
         yaml.dump(settings_tmp, conf)
 
     settings['enabled_groups'].sort()
-    
+
     conf.close()
 
     app.logger.info('Title加载成功')
@@ -64,7 +65,7 @@ def existElem(l: list, elem: Any) -> bool:
 
 
 @Loader.command("赐名", CommandType.Group)
-def plantCommand(app: App, e: GroupMessageRecvEvent):
+def entitleCommand(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     masterId = settings['master']
 
@@ -79,14 +80,14 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     if (masterId == 0 and e.sender.permission == PermissionType.Member) \
-        or (masterId != 0 and masterId != e.sender.id):
+            or (masterId != 0 and masterId != e.sender.id):
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 你没有权限哟~"
         ))
         return
-    
-    if len(e.msg.msgChain) == 0:
+
+    if len(e.msg.strip().msgChain) == 0:
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 格式是\"赐名 @成员 头衔\"哦~"
@@ -94,7 +95,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     atCodes = e.msg.getAtCodes()
-    if (len(atCodes) != 1):
+    if len(atCodes) != 1:
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 格式不对喔~"

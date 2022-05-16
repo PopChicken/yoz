@@ -5,6 +5,7 @@ AUTH_KEY = 'zJdAWmCXz92DAW3vT'
 BOT_ID = 1516161873
 NICKNAME = '猫猫'
 
+NEED_VERIFY = False
 WS_URL = f'ws://{HOST}:{PORT}'
 HTTP_URL = f'http://{HOST}:{PORT}'
 
