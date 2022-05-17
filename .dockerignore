@@ -5,6 +5,7 @@
 **/*.log
 doc/
 config/
+data/
 README.md
 **/__pycache__/
 **/.DS_Store
