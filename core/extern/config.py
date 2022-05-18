@@ -5,9 +5,10 @@ import os
 
 from pathlib import Path
 
+
 class Config:
     __configPath = './config'
-    
+
     @classmethod
     def update(cls, default: dict, loaded: dict) -> dict:
         new = copy.deepcopy(default)
@@ -33,12 +34,12 @@ class Config:
             return open(path, 'r+', encoding='utf-8')
         else:
             return None
-    
+
     def touch(self, fileName: str) -> io.TextIOWrapper:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
         Path(path).touch()
         return open(path, 'r+', encoding='utf-8')
-    
+
     def backup(self, fileName: str) -> None:
         path = f'{Config.__configPath}/{self.moduleName}/{fileName}'
         shutil.copyfile(path, f'{path}.bkp')

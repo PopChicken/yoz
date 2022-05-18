@@ -20,6 +20,7 @@ settings = {
     'enabled_groups': []
 }
 
+
 @Loader.listen('Load')
 def onLoad(app: App):
     global settings
@@ -50,10 +51,11 @@ def onLoad(app: App):
         yaml.dump(settings_tmp, conf)
 
     settings['enabled_groups'].sort()
-    
+
     conf.close()
 
     app.logger.info('Search加载成功')
+
 
 def genMsg(search_str: str, search_engine: str) -> str:
     prefix = {
@@ -65,11 +67,13 @@ def genMsg(search_str: str, search_engine: str) -> str:
     msg = f'正在从 {search_engine} 中搜索...\n'
     return msg+prefix[search_engine]+quote(search_str)
 
+
 def existElem(l: list, elem: Any) -> bool:
     i = bisect_left(l, elem)
     if i != len(l) and l[i] == elem:
         return True
     return False
+
 
 def common(func):
     def wrapper(app: App, e: GroupMessageRecvEvent):
@@ -90,47 +94,48 @@ def common(func):
 def google_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
-    
-    if message: 
+
+    if message:
         app.sendGroupMessage(groupId, genMsg(message, 'google'))
         return True
     else:
         return False
-    
+
+
 @Loader.command("baidu", CommandType.Group)
 @common
 def baidu_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
-    
-    if message: 
+
+    if message:
         app.sendGroupMessage(groupId, genMsg(message, 'baidu'))
         return True
     else:
         return False
-    
+
+
 @Loader.command("github", CommandType.Group)
 @common
 def github_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
-    
-    if message: 
+
+    if message:
         app.sendGroupMessage(groupId, genMsg(message, 'github'))
         return True
     else:
         return False
-    
+
+
 @Loader.command("bilibili", CommandType.Group)
 @common
 def bilibili_search(app: App, e: GroupMessageRecvEvent):
     groupId = e.group.id
     message = str(e.msg).strip()
-    
-    if message: 
+
+    if message:
         app.sendGroupMessage(groupId, genMsg(message, 'bilibili'))
         return True
     else:
         return False
-    
-

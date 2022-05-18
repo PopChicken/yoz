@@ -13,7 +13,7 @@ def genKeys(num: int, effecct: float):
         db.create('key', 'effect')
         db.create_index('uuid')
         db.commit()
-    
+
     for i in range(0, num):
         key = uuid.uuid4()
         db.insert(key=key, effect=effecct)

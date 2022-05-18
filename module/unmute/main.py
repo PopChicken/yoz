@@ -20,6 +20,7 @@ settings = {
     'master': 0,
 }
 
+
 @Loader.listen('Load')
 def onLoad(app: App):
     global settings
@@ -50,7 +51,7 @@ def onLoad(app: App):
         yaml.dump(settings_tmp, conf)
 
     settings['enabled_groups'].sort()
-    
+
     conf.close()
 
     app.logger.info('unmute loaded successfully')
@@ -79,7 +80,7 @@ def plantCommand(app: App, e: GroupMessageRecvEvent):
         return
 
     if (masterId == 0 and e.sender.permission == PermissionType.Member) \
-        or (masterId != 0 and masterId != e.sender.id):
+            or (masterId != 0 and masterId != e.sender.id):
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             " 你没有权限哟~"

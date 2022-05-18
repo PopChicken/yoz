@@ -27,7 +27,7 @@ config = Config('norecall')
 settings = {
     'enabled_groups': []
 }
-    
+
 
 def existElem(l: list, elem: Any) -> bool:
     i = bisect_left(l, elem)
@@ -66,7 +66,7 @@ def onLoad(app: App):
         yaml.dump(settings_tmp, conf)
 
     settings['enabled_groups'].sort()
-    
+
     conf.close()
 
     app.logger.info('NoRecall loaded successfully')
@@ -74,7 +74,7 @@ def onLoad(app: App):
 
 def updateCache(msg: Message):
     global msgDB
-    
+
     msgDB[msg.uid] = msg
     popTime = 0
     for _, v in msgDB.items():
@@ -91,14 +91,14 @@ def onRecvGroupMessage(app: App, e: GroupMessageRecvEvent):
 
     if not existElem(settings['enabled_groups'], groupId):
         return
-    
+
     updateCache(message)
 
 
 @Loader.listen('GroupRecallEvent')
 def onGroupRecallEvent(app: App, e: GroupRecallEvent):
     global msgDB
-    
+
     groupId = e.group.id
     msgId = e.msgId
 
@@ -111,11 +111,9 @@ def onGroupRecallEvent(app: App, e: GroupRecallEvent):
             (" 好可惜呀！没记住说了啥~嘻嘻")
         ))
         return
-    
+
     reply = Message.parse(
-        RefMsg(target=e.operator.id)
-        ,(": ")
+        RefMsg(target=e.operator.id), (": ")
     )
     reply.append(msgDB[msgId])
     app.sendGroupMessage(groupId, reply)
-

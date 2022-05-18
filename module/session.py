@@ -24,7 +24,7 @@ class Session:
 
     def set(self, key: str, value: Any) -> None:
         self.cache[key] = value
-    
+
     def getall(self) -> dict:
         return self.cache.copy()
 
@@ -38,8 +38,8 @@ class SessionLib:
         self.moduleName: str = moduleName
         self.contactSessions: Dict[int, Session] = {}
         self.groupSessions: Dict[int, Dict[int, Session]] = {}
-    
-    def createSession(self, id: int, groupId: int=None) -> Session:
+
+    def createSession(self, id: int, groupId: int = None) -> Session:
         session = Session()
         if groupId is not None:
             self.groupSessions[groupId][id] = session
@@ -47,7 +47,7 @@ class SessionLib:
             self.contactSessions[id] = session
         return session
 
-    def closeSession(self, id: int, groupId:int=None) -> None:
+    def closeSession(self, id: int, groupId: int = None) -> None:
         if groupId is not None:
             if groupId in self.groupSessions and \
                id in self.groupSessions[groupId][id]:
@@ -56,7 +56,7 @@ class SessionLib:
             if id in self.contactSessions:
                 del self.contactSessions[id]
 
-    def getSession(self, id: int, groupId: int=None) -> Session:
+    def getSession(self, id: int, groupId: int = None) -> Session:
         if groupId is not None:
             if groupId in self.groupSessions and \
                id in self.groupSessions[groupId][id]:

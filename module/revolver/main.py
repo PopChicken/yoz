@@ -46,7 +46,7 @@ def cooldown_thread():
 
         t_later = cd.unlockTime
         time.sleep((t_later - t_now) / 1000.0)
-        
+
         groupInfo[cd.groupId].idle = True
 
 
@@ -80,7 +80,7 @@ def onLoad(app: App):
         yaml.dump(settings_tmp, conf)
 
     settings['enabled_groups'].sort()
-    
+
     conf.close()
 
     _thread.start_new_thread(cooldown_thread, ())
@@ -105,17 +105,17 @@ def onCommand(app: App, e: GroupMessageRecvEvent):
 
     if not existElem(settings['enabled_groups'], groupId):
         return
-    
+
     if len(argument) == 0:
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
             ("欢迎来玩转轮手枪~\n"
-            "嘎嘎嘎~这是一个恐怖的游戏！\n"
-            f"{app.nickname}会为一把六发左轮的弹舱随机装入一发弹药\n"
-            f"使用“{app.commandHead}扣扳机”来参加比赛 嘻嘻嘻\n"
-            "与赛的各位，依次把枪口调向自己，扣动扳机，直到...砰——子弹出膛！")
+             "嘎嘎嘎~这是一个恐怖的游戏！\n"
+             f"{app.nickname}会为一把六发左轮的弹舱随机装入一发弹药\n"
+             f"使用“{app.commandHead}扣扳机”来参加比赛 嘻嘻嘻\n"
+             "与赛的各位，依次把枪口调向自己，扣动扳机，直到...砰——子弹出膛！")
         ))
-    
+
     if groupInfo[groupId.id].idle:
         app.sendGroupMessage(groupId, Message.parse(
             RefMsg(target=e.sender.id),
@@ -137,4 +137,3 @@ def onCommand(app: App, e: GroupMessageRecvEvent):
 
     if not existElem(settings['enabled_groups'], groupId):
         return
-    

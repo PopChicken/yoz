@@ -7,6 +7,7 @@ from core.extern.config import Config
 
 trees: dict = {}
 
+
 def init(config: Config) -> None:
     global trees
     treef = config.getf('trees.yml')
@@ -26,7 +27,7 @@ def getItemDetail(id: int) -> dict:
     return deepcopy(trees['item'][int(id/1000)][id])
 
 
-def lottery(maskProc: float, offset: float=0) -> int:
+def lottery(maskProc: float, offset: float = 0) -> int:
     global trees
     masks: dict = trees['mask']
     probs: dict = trees['prob']
@@ -40,7 +41,7 @@ def lottery(maskProc: float, offset: float=0) -> int:
     for quailty in quals:
         prob = probs[quailty] * masks[maskNum][quailty]
         integrate += prob
-        if integrate > 0 and test <  integrate:
+        if integrate > 0 and test < integrate:
             break
     itemId = random.choice(list(trees['item'][quailty].keys()))
     return itemId, quailty

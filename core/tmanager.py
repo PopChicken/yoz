@@ -31,7 +31,7 @@ class ThreadManager:
         pass
 
     def execute(self, func: Callable, args: Iterable):
-        def executor(): # 用于执行
+        def executor():  # 用于执行
             class ExceptionResult:  # 用于储存异常信息
                 def __init__(self) -> None:
                     self.exitcode: int = 0
@@ -44,8 +44,10 @@ class ThreadManager:
                 except Exception as ex:
                     result.exitcode = 1
                     result.exception = ex
-                    result.exc_traceback = ''.join(traceback.format_exception(*sys.exc_info()))
-                    App.logger.warning("Error occurred in plugin\n" + result.exc_traceback)
+                    result.exc_traceback = ''.join(
+                        traceback.format_exception(*sys.exc_info()))
+                    App.logger.warning(
+                        "Error occurred in plugin\n" + result.exc_traceback)
 
             res = ExceptionResult()
             t = Thread(target=run, args=(res, ))
@@ -57,7 +59,7 @@ class ThreadManager:
 
             if t.is_alive():
                 self.__results.put(TaskExecuteResult.Timeout)
-            elif res.exitcode == 1: # 未捕获的异常
+            elif res.exitcode == 1:  # 未捕获的异常
                 self.__results.put(TaskExecuteResult.Fail)
             else:
                 self.__results.put(TaskExecuteResult.Success)

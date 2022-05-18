@@ -1,8 +1,9 @@
 import os
 
+
 class Data:
     __dataPath = './data'
-    
+
     def __init__(self, moduleName) -> None:
         self.moduleName = moduleName
 

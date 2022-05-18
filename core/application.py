@@ -24,7 +24,8 @@ class App(ABC):
     chandler = logging.StreamHandler()
     chandler.setFormatter(cFormatter)
 
-    formatter = logging.Formatter('%(asctime)s  %(relativepath)s:%(lineno)s\t: %(levelname)s %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s  %(relativepath)s:%(lineno)s\t: %(levelname)s %(message)s')
     fHandler = logging.FileHandler("yoz.log")
     fHandler.setFormatter(formatter)
 
@@ -55,7 +56,7 @@ class App(ABC):
     @abstractmethod
     def unredirect(self, guid: str) -> None:
         pass
-    
+
     @abstractmethod
     @overload
     def sendGroupMessage(self, group: int, message: Message) -> Message:
@@ -74,7 +75,7 @@ class App(ABC):
     @abstractmethod
     def setSpecialTitle(self, group: int, id: int, title: str) -> None:
         pass
-    
+
     @abstractmethod
     def mute(self, group: int, id: int, time: int) -> None:
         """对群成员禁言，单位分钟"""
@@ -96,16 +97,16 @@ class App(ABC):
 
     @abstractmethod
     @overload
-    def sendContactMessage(self, contact: int, message: Message, group: int=None) -> Message:
-        pass
-    
-    @abstractmethod
-    @overload
-    def sendContactMessage(self, contact: int, message: str, group: int=None) -> Message:
+    def sendContactMessage(self, contact: int, message: Message, group: int = None) -> Message:
         pass
 
     @abstractmethod
-    def sendContactMessage(self, contact, message, group: int=None) -> Message:
+    @overload
+    def sendContactMessage(self, contact: int, message: str, group: int = None) -> Message:
+        pass
+
+    @abstractmethod
+    def sendContactMessage(self, contact, message, group: int = None) -> Message:
         """发送联系人消息（group参数适配mirai）"""
         pass
 
@@ -120,7 +121,7 @@ class App(ABC):
         pass
 
     @abstractmethod
-    def sendWebImage(self, urls: List[str], contactId: int=None, groupId: int=None) -> Message:
+    def sendWebImage(self, urls: List[str], contactId: int = None, groupId: int = None) -> Message:
         """发送URL图片"""
         pass
 

@@ -45,9 +45,9 @@ def cooldown_thread():
 
         t_later = cd.unlockTime
         time.sleep((t_later - t_now) / 1000.0)
-        
+
         groupInfo[cd.groupId].idle = True
-    
+
 
 def existElem(l: list, elem: Any) -> bool:
     i = bisect_left(l, elem)
@@ -92,12 +92,12 @@ def onLoad(app: App):
 
     settings['enabled_groups'].sort()
     settings['banned_words'].sort()
-    
+
     conf.close()
 
     for id in settings['enabled_groups']:
         groupInfo[id] = Info(True, "")
-    
+
     _thread.start_new_thread(cooldown_thread, ())
 
     app.logger.info('复读机加载成功')

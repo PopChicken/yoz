@@ -18,7 +18,6 @@ class Crontab:
         self.__timeline.setDaemon(True)
         self.__timeline.start()
 
-    
     def add(self, uuid: str, delay: float, callback: Callable, args: tuple = None):
         if args is None:
             args = tuple()
@@ -48,7 +47,7 @@ class Crontab:
                         break
                     node = node.next
                 self.__tasks.insert(v, node)
-                
+
             self.__timeline.act.set()
 
 
@@ -66,7 +65,7 @@ class Timeline(threading.Thread):
         while True:
             if self.tasks.size == 0:
                 self.act.wait()
-            
+
             with self.lock:
                 node = self.tasks.first
 

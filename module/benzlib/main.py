@@ -79,9 +79,9 @@ def test_service() -> None:
         App.logger.info("re-connected with YMDB service")
     else:
         crontab.add('service_tester', 5, test_service)
-    
 
-def make_req(path: str, json: dict=None) -> Tuple[RespStatus, dict | Any]:
+
+def make_req(path: str, json: dict = None) -> Tuple[RespStatus, dict | Any]:
     global service_online
     if service_online is False:
         return RespStatus.Offline, None
@@ -154,7 +154,7 @@ def onLoad(app: App):
     if settings['ymdb_ssl']:
         schema = 'https'
     netloc = f'{schema}://{settings["ymdb_host"]}:{settings["ymdb_port"]}'
-    
+
     conf.close()
 
     app.logger.info('BenzLib loaded successfully')
@@ -232,7 +232,7 @@ def addBenz(app: App, e: GroupMessageRecvEvent):
             " 评分最高为10哦~"
         ))
         return
-    
+
     stat, resp = make_req('manga/add', {
         'title': title,
         'author': author,
@@ -254,7 +254,7 @@ def addBenz(app: App, e: GroupMessageRecvEvent):
              f"{resp}")
         ))
         return
-    
+
     app.sendGroupMessage(e.group.id, Message.parse(
         RefMsg(target=e.sender.id),
         (" 操作成功~\n"
@@ -419,7 +419,7 @@ def addGallery(app: App, e: GroupMessageRecvEvent):
              f"{resp}")
         ))
         return
-    
+
     app.sendGroupMessage(e.group.id, Message.parse(
         RefMsg(target=e.sender.id),
         " 操作成功~"
@@ -445,13 +445,13 @@ def searchBenz(app: App, e: GroupMessageRecvEvent):
              "\t标签支持任意多个，但是必须用空格分开喔~")
         ))
         return
-    
+
     semicolon = Suppress(';')
     pattern = Optional(content_no_space_semicolon, '') + semicolon \
         + Optional(content_quoted | content_no_space_semicolon, '') + semicolon \
         + Optional(content_quoted | content_no_space_semicolon, '') + semicolon \
         + Optional(number, '') + semicolon + any_no_quote
-    
+
     try:
         comp: List[str] = pattern.parseString(argument)
     except ParseException:
@@ -460,7 +460,7 @@ def searchBenz(app: App, e: GroupMessageRecvEvent):
             " 格式不对喔~"
         ))
         return
-    
+
     # App.logger.info(comp)
 
     tags_pattern = Optional(delimitedList(content_no_space, delim=White(' ')))
@@ -501,7 +501,7 @@ def searchBenz(app: App, e: GroupMessageRecvEvent):
     if len(tags) > 0:
         no_filter = False
         req['tag'] = tags
-    
+
     if no_filter:
         app.sendGroupMessage(e.group.id, Message.parse(
             RefMsg(target=e.sender.id),
@@ -550,6 +550,7 @@ def searchBenz(app: App, e: GroupMessageRecvEvent):
              f"{result}")
         ))
     """
+
 
 @Loader.command('全部标签', CommandType.Group)
 def addTag(app: App, e: GroupMessageRecvEvent):
@@ -667,9 +668,9 @@ def setTag(app: App, e: GroupMessageRecvEvent):
              "注意: 标签不能包含空格且需要已经创建喔~")
         ))
         return
-    
+
     pattern = integer + content_no_space
-    
+
     try:
         comp = pattern.parseString(argument)
     except ParseException:
@@ -678,7 +679,7 @@ def setTag(app: App, e: GroupMessageRecvEvent):
             " 格式不对喔~"
         ))
         return
-    
+
     manga_id: int = int(comp[0])
     tag: str = comp[1]
 
@@ -734,7 +735,7 @@ def getManga(app: App, e: GroupMessageRecvEvent):
             " 格式不对喔~"
         ))
         return
-    
+
     manga_id: int = int(comp[0])
     stat, resp = make_req('manga/get', {
         'manga_id': manga_id
@@ -773,7 +774,7 @@ def getManga(app: App, e: GroupMessageRecvEvent):
              f"{resp}")
         ))
         return
-    
+
     app.sendGroupMessage(e.group.id, Message.parse(
         RefMsg(target=e.sender.id),
         (" 这是你要的本子~\n"
@@ -796,7 +797,7 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
              "注意: 图片不能超过5MB喔~")
         ))
         return
-    
+
     if len(e.msg.msgChain) != 2 or \
        e.msg.msgChain[0].type != MessageType.TextMessage or \
        e.msg.msgChain[1].type != MessageType.ImageMessage:
@@ -805,7 +806,7 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
             " 格式不对喔~"
         ))
         return
-    
+
     argument = str(e.msg.msgChain[0]).strip()
 
     pattern = integer
@@ -818,7 +819,7 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
             " 格式不对喔~"
         ))
         return
-    
+
     manga_id: int = int(comp[0])
     img_url: str = e.msg.msgChain[1].url
 
@@ -826,7 +827,7 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
 
     pattern = r'^http://gchat.qpic.cn/gchatpic_new/\d+/\d+\-\d+\-([0-9A-Z]+)/.*'
     img_name = re.match(pattern, img_url).group(1) + '.jpg'
-    headers={'token': settings['imgbed_token']}
+    headers = {'token': settings['imgbed_token']}
     files = [
         ('image', (img_name, img_resp.content, 'image/jpeg'))
     ]
@@ -857,7 +858,8 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
         ))
         try:
             data = {'id': resp['thumbnail_id']}
-            upload_resp = requests.post(f'{imgbed_manager}/api/delete', headers=headers, data=data).json()
+            upload_resp = requests.post(
+                f'{imgbed_manager}/api/delete', headers=headers, data=data).json()
         except ConnectionError:
             App.logger.warn("lost connection to image bed service")
             app.sendGroupMessage(e.group.id, Message.parse(
@@ -874,7 +876,8 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
             return
 
     try:
-        upload_resp = requests.post(f'{imgbed_manager}/api/upload', headers=headers, files=files).json()
+        upload_resp = requests.post(
+            f'{imgbed_manager}/api/upload', headers=headers, files=files).json()
     except ConnectionError:
         App.logger.warn("lost connection to image bed service")
         app.sendGroupMessage(e.group.id, Message.parse(
@@ -901,8 +904,9 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
     url = urlparse(upload_resp['data']['url'])
     thumbnail_id = int(upload_resp['data']['id'])
     thumbnail = f'{imgbed}{url.path}'
-    
-    App.logger.info(f"'{img_name}' uploaded successfully with id '{thumbnail_id}' and url '{thumbnail}'")
+
+    App.logger.info(
+        f"'{img_name}' uploaded successfully with id '{thumbnail_id}' and url '{thumbnail}'")
 
     stat, resp = make_req('manga/setThumbnail', {
         'manga_id': manga_id,
@@ -924,7 +928,7 @@ def setThunmbnail(app: App, e: GroupMessageRecvEvent):
              f"{resp}")
         ))
         return
-    
+
     app.sendGroupMessage(e.group.id, Message.parse(
         RefMsg(target=e.sender.id),
         " 操作成功~"

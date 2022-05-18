@@ -55,7 +55,7 @@ class ContactMessageRecvEvent(BaseEvent):
         self.msg: Message = None
 
         super().__init__(EventType.ContactMessageEvent)
-        
+
         senderInfo = data['sender']
         id = senderInfo['id']
         nickname = senderInfo['nickname']
@@ -107,4 +107,3 @@ class GroupRecallEvent(BaseEvent):
             groupName=groupName,
             permission=groupPermission
         )
-

@@ -14,10 +14,10 @@ class BaseMsg:
         self.type: MessageType = None
 
         self.type = type
-    
+
     def getType(self) -> MessageType:
         return copy.copy(self.type)
-    
+
     def dict() -> dict:
         pass
 
@@ -38,7 +38,7 @@ class TextMsg(BaseMsg):
 
     def __str__(self) -> str:
         return self.text
-    
+
     def dict(self):
         return {
             'text': self.text
@@ -64,7 +64,7 @@ class RefMsg(BaseMsg):
 
     def __str__(self) -> str:
         return f'[YOZ:At,target={self.target}]'
-    
+
     def dict(self):
         return {
             'target': self.target
@@ -72,7 +72,7 @@ class RefMsg(BaseMsg):
 
 
 class ImgMsg(BaseMsg):
-    
+
     def __init__(self, data: dict) -> None:
         self.imageId: str = None
         self.online: bool = None
@@ -83,10 +83,10 @@ class ImgMsg(BaseMsg):
         self.online = False
         self.imageId = data['imageId']
         self.url = data['url']
-    
+
     def __str__(self) -> str:
         return f'[YOZ:Image,imageId={self.imageId}]'
-    
+
     def dict(self):
         if self.online:
             return {
@@ -164,12 +164,11 @@ class Message:
                 del msg.msgChain[-1]
         return msg
 
-
     def md5(self) -> str:
         hl = hashlib.md5()
         hl.update(str(self).encode(encoding='utf-8'))
         return hl.hexdigest()
-    
+
     def chain(self) -> List[dict]:
         chain = []
         for msg in self.msgChain:
@@ -183,7 +182,7 @@ class Message:
         _msg = copy.deepcopy(self)
         _msg.msgChain += msg.msgChain
         return _msg
-    
+
     def append(self, msg: "Message") -> None:
         self.msgChain += msg.msgChain
 

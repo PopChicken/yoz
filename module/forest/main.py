@@ -29,7 +29,6 @@ from util.crontab import Crontab
 from module.session import Session, SessionLib
 
 
-
 MODULE_NAME = 'forest'
 
 data = Data(MODULE_NAME)
@@ -87,7 +86,7 @@ def dbCommit():
         db.commit()
 
 
-def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
+def plantComplete(app: App, groupId: int, memberId: int, type: str = 'success'):
     info = db(groupId=groupId, memberId=memberId)[0]
     if type == 'success':
         proc = info['duration'] / settings['max_time'] * 100
@@ -110,7 +109,7 @@ def plantComplete(app: App, groupId: int, memberId: int, type: str='success'):
         else:
             userdb.insert(
                 userid=memberId,
-                bag={ treeId: 1 },
+                bag={treeId: 1},
                 accumulate=info['duration']
             )
         userdb.commit()
@@ -287,7 +286,7 @@ def groupViewTrees(app: App, e: GroupMessageRecvEvent):
     msg.chain()
     record = userdb(userid=e.sender.id)
     empty = True
-    
+
     if len(record) > 0:
         reply = "你的树林里有以下树木👇\n"
         bag = record[0]['bag']
@@ -314,7 +313,7 @@ def groupViewTrees(app: App, e: GroupMessageRecvEvent):
 def contactViewTrees(app: App, e: ContactMessageRecvEvent):
     record = userdb(userid=e.sender.id)
     empty = True
-    
+
     if len(record) > 0:
         reply = "你的树林里有以下树木👇\n"
         bag = record[0]['bag']
@@ -340,6 +339,7 @@ def useCard(app: App, e: ContactMessageRecvEvent):
         return
     # m = re.match(r'', arg)
 
+
 @Loader.command("放弃种树", CommandType.Contact)
 def unplantCommand(app: App, e: ContactMessageRecvEvent):
 
@@ -356,10 +356,10 @@ def unplantCommand(app: App, e: ContactMessageRecvEvent):
             if str.isdigit(message):
                 id = int(message)
                 if 1 <= id <= optionCnt:
-                    app.replyContactMessage(sender, 
-                        ("你确定嘛？\n"
-                         "输入“确定”放弃种树，输入其他内容取消操作")
-                    )
+                    app.replyContactMessage(sender,
+                                            ("你确定嘛？\n"
+                                             "输入“确定”放弃种树，输入其他内容取消操作")
+                                            )
                     session.set('groupId', options[id])
                     session.next()
                 else:
@@ -394,17 +394,17 @@ def unplantCommand(app: App, e: ContactMessageRecvEvent):
 
     options: Dict[int, int] = {}
     reply = ''
-    
+
     optCnt = 0
     for r in records:
         optCnt += 1
         options[optCnt] = r['groupId']
         reply += f'{optCnt}. {r["groupName"]}\n'
-    
+
     session.set('options', options)
     session.set('optionCnt', optCnt)
     session.next()
-    
+
     app.replyContactMessage(sender, Message.parse(
         ("你有以下几个正在种树的群\n"
          + reply +
@@ -414,5 +414,3 @@ def unplantCommand(app: App, e: ContactMessageRecvEvent):
 
     guid = str(contactId)
     app.redirectContact(guid, contactId, sessionHandler)
-
-

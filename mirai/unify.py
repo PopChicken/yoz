@@ -43,5 +43,6 @@ def unifyTemp2FriendEvent(event_dict: dict) -> dict:
     del event_dict['sender']['permission']
     return event_dict
 
+
 def unifyPermission(permission: str) -> str:
     return __PERMISSION_MAP.get(permission.upper())

@@ -190,18 +190,21 @@ class PluginMaster:
         for event, _ in self.events.items():
             del Loader.eventsListener[event][self.module]
         self.__hooked = False
-        App.logger.info(f"observers of plugin '{self.name}' have been unhooked")
+        App.logger.info(
+            f"observers of plugin '{self.name}' have been unhooked")
 
     def hook(self) -> None:
         if self.__hooked:
             raise Exception(f"observers of '{self.name}' have already hooked")
         for cmd, func in self.groupCommands:
             if cmd in Loader.groupCommands:
-                raise Exception(f"the command '{cmd}' for groups' conversation has been registered")
+                raise Exception(
+                    f"the command '{cmd}' for groups' conversation has been registered")
             Loader.groupCommands[cmd] = func
         for cmd, func in self.contactCommands:
             if cmd in Loader.contactCommands:
-                raise Exception(f"the command '{cmd}' for contacts' conversation has been registered")
+                raise Exception(
+                    f"the command '{cmd}' for contacts' conversation has been registered")
             Loader.contactCommands[cmd] = func
         for event, funcs in self.events.items():
             Loader.eventsListener.setdefault(event, {})
@@ -256,13 +259,15 @@ class Loader:
                 raise Exception("illegal event command registration attempt")
             if base == CommandType.Group:
                 if command in cls.groupCommands:
-                    raise Exception(f"the command '{command}' for groups' conversation has been registered")
+                    raise Exception(
+                        f"the command '{command}' for groups' conversation has been registered")
                 cls.groupCommands[command] = func
                 master: PluginMaster = cls.lib.get(module)
                 master.groupCommands.append((command, func))
             elif base == CommandType.Contact:
                 if command in cls.contactCommands:
-                    raise Exception(f"the command '{command}' for contacts' conversation has been registered")
+                    raise Exception(
+                        f"the command '{command}' for contacts' conversation has been registered")
                 cls.contactCommands[command] = func
                 master: PluginMaster = cls.lib.get(module)
                 master.contactCommands.append((command, func))
@@ -290,7 +295,8 @@ class Loader:
                 name = manifest['name']
                 App.logger.info(f"'{name}' discovered in '{root}'")
                 if module in cls.lib.cache():
-                    App.logger.warn(f"'{name}' has already been installed. start to reload it")
+                    App.logger.warn(
+                        f"'{name}' has already been installed. start to reload it")
                     plugin: PluginMaster = cls.lib.get(module)
                     if plugin is not None:
                         plugin.unhook()

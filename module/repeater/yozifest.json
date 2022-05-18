@@ -1,8 +1,8 @@
 {
-    "name": "repeater",
-    "altername": "复读机",
-    "version": "0.1-beta",
-    "author": "noam",
-    "description": "快乐模拟人类本质",
-    "website": "jnn.icu"
+  "name": "repeater",
+  "altername": "复读机",
+  "version": "0.1-beta",
+  "author": "noam",
+  "description": "快乐模拟人类本质",
+  "website": "jnn.icu"
 }

@@ -98,9 +98,11 @@ class Mirai(App):
                     app.sessionKey = response['data']['session']
                     break
                 except TimeoutError:
-                    App.logger.error("websocket connecting attemption timeout, retrying")
+                    App.logger.error(
+                        "websocket connecting attemption timeout, retrying")
                 except:
-                    App.logger.error("websocket connecting attemption failed, retrying")
+                    App.logger.error(
+                        "websocket connecting attemption failed, retrying")
                     time.sleep(10.0)
             App.logger.info("mirai-http service connected")
             return receiver
@@ -135,7 +137,8 @@ class Mirai(App):
             if eventName == 'GroupMessage':
                 groupId = response['sender']['group']['id']
                 memberId = response['sender']['id']
-                rec = self.memberRedirections(groupId=groupId, memberId=memberId)
+                rec = self.memberRedirections(
+                    groupId=groupId, memberId=memberId)
                 if len(rec) != 0:
                     rec = rec[0]
                     e = GroupMessageRecvEvent(
@@ -167,7 +170,8 @@ class Mirai(App):
                             for cmdStr in Loader.groupCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
                                     mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch) + 1:]
+                            section1['text'] = section1['text'][len(
+                                mostMatch) + 1:]
                             e = GroupMessageRecvEvent(
                                 unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
@@ -176,7 +180,8 @@ class Mirai(App):
                             for cmdStr in Loader.contactCommands.keys():
                                 if text[:len(cmdStr)] == cmdStr and len(cmdStr) > len(mostMatch):
                                     mostMatch = cmdStr
-                            section1['text'] = section1['text'][len(mostMatch) + 1:]
+                            section1['text'] = section1['text'][len(
+                                mostMatch) + 1:]
                             e = ContactMessageRecvEvent(
                                 unify.unifyEventDict(response))
                             if len(mostMatch) != 0:
@@ -199,7 +204,7 @@ class Mirai(App):
 
     def __init_modules(self) -> None:
         Loader.loadPlugins('module')
-        
+
         App.logger.info("initializing plugins...")
         modules = Loader.eventsListener.get('Load')
         if modules is not None:
@@ -248,7 +253,8 @@ class Mirai(App):
             "target": group,
             "messageChain": message.chain()
         }
-        resp = requests.post(f'{s.HTTP_URL}/sendGroupMessage', json=fMsg).json()
+        resp = requests.post(
+            f'{s.HTTP_URL}/sendGroupMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
@@ -308,7 +314,8 @@ class Mirai(App):
         if group is not None:
             fMsg['group'] = group
             fMsg['qq'] = contact
-            resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+            resp = requests.post(
+                f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
         else:
             temp = False
             for frameInfo in inspect.stack(0):
@@ -322,10 +329,12 @@ class Mirai(App):
             if temp:
                 fMsg['group'] = groupId
                 fMsg['qq'] = contact
-                resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+                resp = requests.post(
+                    f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
             else:
                 fMsg['target'] = contact
-                resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+                resp = requests.post(
+                    f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
@@ -341,10 +350,12 @@ class Mirai(App):
         if sender.fromGroup is not None:
             fMsg['group'] = sender.fromGroup
             fMsg['qq'] = sender.id
-            resp = requests.post(f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
+            resp = requests.post(
+                f'{s.HTTP_URL}/sendTempMessage', json=fMsg).json()
         else:
             fMsg['target'] = sender.id
-            resp = requests.post(f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
+            resp = requests.post(
+                f'{s.HTTP_URL}/sendFriendMessage', json=fMsg).json()
         message = copy.deepcopy(message)
         message.uid = resp['messageId']
         return message
@@ -409,7 +420,8 @@ class Mirai(App):
         pass
 
     def getMemberList(self, group: int) -> List[Member]:
-        resp = requests.get(f'{s.HTTP_URL}/memberList?sessionKey={self.sessionKey}&target={group}').json()
+        resp = requests.get(
+            f'{s.HTTP_URL}/memberList?sessionKey={self.sessionKey}&target={group}').json()
         members = []
         for m in resp['data']:
             member = Member(m['id'], m['memberName'], unify.unifyPermission(m['permission']),

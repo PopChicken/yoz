@@ -55,13 +55,13 @@ class Challenge:
         self.target: int = target
         self.ratio: int = ratio
         self.timestamp: int = time.time()
-    
+
     def getValidTimeStr(self) -> str:
         validSec = round(settings['valid_span'] - time.time() + self.timestamp)
         if validSec >= 60:
             return f"{int(validSec / 60)}分{validSec % 60}秒"
         return f"{int(validSec)}秒"
-    
+
     def getValidTimeSec(self) -> int:
         return round(settings['valid_span'] - time.time() + self.timestamp)
 
@@ -121,7 +121,8 @@ def getLock(group: int, id: int) -> Lock:
 
 def handleTimeout(challenge: Challenge) -> None:
     with (getLock(challenge.group, challenge.initiator), getLock(challenge.group, challenge.target)):
-        transit(challenge.app, challenge.group, challenge.initiator, SoloCommandType.Timeout)
+        transit(challenge.app, challenge.group,
+                challenge.initiator, SoloCommandType.Timeout)
 
 
 def getChallengeFrom(group: int, sender: int) -> Challenge | None:
@@ -159,7 +160,8 @@ def initiateChallenge(app: App, group: int, sender: int, acceptor: int,
     requestsDB[group][acceptor][sender] = challenge
     challengerDB[group][sender] = challenge
 
-    crontab.add(f'{str(group)}-{str(sender)}', settings['valid_span'], handleTimeout, (challenge, ))
+    crontab.add(f'{str(group)}-{str(sender)}',
+                settings['valid_span'], handleTimeout, (challenge, ))
 
 
 def versus(app: App, group: int, challenge: Challenge, attacker: int, defender: int):
@@ -198,7 +200,7 @@ def versus(app: App, group: int, challenge: Challenge, attacker: int, defender: 
         roundMsg.parseAppend(
             f"应战者{RefMsg(target=defender)} 击败了挑战者{RefMsg(target=attacker)}\n"
         )
-    
+
     if challenge.enhanced:
         if draw:
             roundMsg.parseAppend(
@@ -208,14 +210,15 @@ def versus(app: App, group: int, challenge: Challenge, attacker: int, defender: 
             roundMsg.parseAppend(
                 f"{RefMsg(target=loser)} 在大拼点中被击败了！接受处罚吧！\n"
             )
-            app.mute(group, loser, int(challenge.ratio * abs(attack - defend) * 60))
-    
+            app.mute(group, loser, int(
+                challenge.ratio * abs(attack - defend) * 60))
+
     removeChallengeFrom(group, attacker)
     app.sendGroupMessage(group, roundMsg)
 
 
 def transit(app: App, group: int, initiator: int, type: SoloCommandType,
-            target: int=None, ratio: int=None) -> None:
+            target: int = None, ratio: int = None) -> None:
     initiatorStatus: SoloStatus = getStatus(group, initiator)
     targetStatus: SoloStatus = getStatus(group, target)
     if initiator == target:
@@ -244,7 +247,8 @@ def transit(app: App, group: int, initiator: int, type: SoloCommandType,
                             versus(app, group, challenge, target, initiator)
                             setStatus(group, target, SoloStatus.Idle)
                             return
-                    initiateChallenge(app, group, initiator, target, enhanced, ratio)
+                    initiateChallenge(app, group, initiator,
+                                      target, enhanced, ratio)
                     setStatus(group, initiator, SoloStatus.Waiting)
                     app.sendGroupMessage(group, Message.parse(
                         RefMsg(target=initiator),
@@ -424,7 +428,7 @@ def handleSolo(app: App, e: GroupMessageRecvEvent, enhanced: bool = False):
     type = SoloCommandType.Solo
     if enhanced:
         type = SoloCommandType.SoloEnhanced
-    
+
     if targetId == senderId:
         with getLock(groupId, senderId):
             transit(app, groupId, senderId, type, targetId, ratio)
@@ -452,7 +456,7 @@ def Solo(app: App, e: GroupMessageRecvEvent):
             RefMsg(target=e.sender.id),
             " 你没有at你的拒绝对象喔~"
         ))
-    
+
     msg = e.msg.strip()
     if len(msg.msgChain) == 0 or msg[0].type != MessageType.AtMessage:
         app.sendGroupMessage(e.group.id, Message.parse(
@@ -497,7 +501,7 @@ def Solo(app: App, e: GroupMessageRecvEvent):
             RefMsg(target=e.sender.id),
             " 格式不对喔~"
         ))
-    
+
     with getLock(e.group.id, e.sender.id):
         requests = getChallengesOn(e.group.id, e.sender.id)
         if requests is None or len(requests) == 0:
@@ -515,4 +519,3 @@ def Solo(app: App, e: GroupMessageRecvEvent):
                 reply.parseAppend(
                     f"{member.inGroupName} {type}拼点 {req.getValidTimeStr()}\n")
             app.sendGroupMessage(e.group.id, reply)
-

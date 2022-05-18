@@ -102,7 +102,8 @@ def entitleCommand(app: App, e: GroupMessageRecvEvent):
         ))
         return
 
-    app.setSpecialTitle(groupId, atCodes[0].target, str(e.msg.msgChain[2]).strip())
+    app.setSpecialTitle(groupId, atCodes[0].target, str(
+        e.msg.msgChain[2]).strip())
     app.sendGroupMessage(groupId, Message.parse(
         RefMsg(target=e.sender.id),
         " 操作成功~"

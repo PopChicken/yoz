@@ -27,7 +27,8 @@ class Node(object):
             node = nodes.pop()
             if node.value is not node.no_value:
                 yield node
-            nodes.extend(node.nodes[key] for key in sorted(node.nodes, reverse=True))
+            nodes.extend(node.nodes[key]
+                         for key in sorted(node.nodes, reverse=True))
 
 
 class Trie(object):
